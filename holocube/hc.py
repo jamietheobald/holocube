@@ -1,0 +1,15 @@
+# instantiate the classes needed for 5 sided holocube operation and
+# set up the namespace for import by run and experiments
+
+import holocube.control as control
+import holocube.windows as windows
+import holocube.schedulers as schedulers
+import holocube.stimuli as stim
+import holocube.arduino as ard
+import holocube.tools as tools
+
+# objects we need in run and exps
+control = control.Control_Window()
+window = windows.Holocube_window()
+scheduler = schedulers.Scheduler()
+arduino = ard.Arduino()

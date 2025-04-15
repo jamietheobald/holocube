@@ -1,0 +1,87 @@
+# several stimuli to test simple tracking
+
+import holocube.hc5 as hc
+import numpy as np
+from scipy.signal import find_peaks
+
+# length of each test
+fps = 120
+num_secs = 2
+num_frames = num_secs * fps
+
+# stimuli --- bar, white, and black points
+bar = hc.stim.cbarr_class(hc.window, dist=1)
+wpts = hc.stim.Points(hc.window, int(10 ** 4), dims=[(-5, 5), (-5, 5), (-5, 5)], color=1, pt_size=4)
+bpts = hc.stim.Points(hc.window, int(10 ** 4), dims=[(-5, 5), (-5, 5), (-5, 5)], color=0, pt_size=4)
+stims = [bar, wpts, bpts]
+
+# motion --- 1, 2 and 4 Hz turning
+tri1 = 0.5 * np.arcsin(np.sin(np.linspace(0, 2 * np.pi * num_secs * 1, num_frames))) * 180 / np.pi
+tri2 = 0.5 * np.arcsin(np.sin(np.linspace(0, 2 * np.pi * num_secs * 2, num_frames))) * 180 / np.pi
+tri4 = 0.5 * np.arcsin(np.sin(np.linspace(0, 2 * np.pi * num_secs * 4, num_frames))) * 180 / np.pi
+turns = [tri1, tri2, tri4]
+
+# add the exp
+estarts = [[hc.window.set_far, 4],
+           [hc.window.reset_pos_rot],
+           [hc.window.set_bg, [0.5, 0.5, 0.5, 1.0]]]
+
+eends = [[hc.window.set_far, 2],
+         [hc.window.set_bg, [0.0, 0.0, 0.0, 1.0]]]
+
+hc.scheduler.add_exp(None, estarts, eends)
+
+# add the tests
+test = 0
+for stim in stims:
+    for turn in turns:
+        synch_flash, num_flash = hc.tools.test_bin_flash(test, num_frames)
+        peaks = find_peaks(np.abs(np.diff(turn, 2, prepend=0)), height=1)
+        peak_flash = hc.tools.test_flash(peaks[0], num_frames)
+
+        starts = [[stim.switch, True],
+                  ]
+
+        middles = [[stim.set_ry, turn],
+                   [hc.window.set_ref, 0, synch_flash],
+                   [hc.window.set_ref, 1, num_flash],
+                   [hc.window.set_ref, 2, peak_flash],
+                   ]
+
+        ends = [[stim.switch, False],
+                ]
+
+        hc.scheduler.add_test(num_frames, starts, middles, ends)
+        test += 1
+
+# one more test with conflicting point motion
+starts = [[bpts.switch, True],
+          [wpts.switch, True],
+          ]
+
+middles = [[bpts.set_ry, tri1],
+           [wpts.set_ry, -tri1],
+           ]
+
+ends = [[bpts.switch, False],
+        [wpts.switch, False],
+        ]
+
+hc.scheduler.add_test(num_frames, starts, middles, ends)
+
+# add the rest
+num_frames = 90
+rbar = hc.stim.cbarr_class(hc.window, dist=1)
+
+starts = [[hc.arduino.set_lmr_scale, -.1],
+          [rbar.set_ry, -90],
+          [rbar.switch, True],
+          ]
+
+middles = [[rbar.inc_ry, hc.arduino.lmr],
+           ]
+
+ends = [[rbar.switch, False],
+        ]
+
+hc.scheduler.add_rest(num_frames, starts, middles, ends)

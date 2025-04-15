@@ -1,0 +1,20 @@
+#! /usr/bin/env python
+# run.py
+import pyglet
+import holocube.hc5 as hc
+
+hc.window.start(config_file='test_viewport.config')
+hc.arduino.start('dummy')
+hc.scheduler.start(hc.window, randomize=False, default_rest_time=.1)
+hc.scheduler.load_dir('experiments', suffix=('exp.py', 'rest.py'))
+print('ready')
+
+# for debuggin
+w = hc.window
+s = hc.scheduler
+v = w.viewports[-1]
+
+e = s.exps[1].tests[1]
+d = e.starts[2][0].__self__
+
+pyglet.app.run()

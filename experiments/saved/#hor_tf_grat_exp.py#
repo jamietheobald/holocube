@@ -1,0 +1,78 @@
+# complex scene attention exp
+# import holocube.hc5 as hc
+import holocube.hc5 as hc
+import numpy as np
+
+# num_frames = np.inf
+num_frames = 200
+
+dist = 2
+square = hc.stim.Movable_grating(hc.window, np.array([[-1,1,1,-1],[-1,-1,1,1], [-dist,-dist,-dist,-dist]]),
+                                 sf=5, tf=3, o=np.pi/4, sd=.35)
+# pts = hc.stim.Points(hc.window, int(10**4), dims=[(-5, 5),(-5, 5),(-5, 5)], color=1, pt_size=4)
+
+horizon = hc.stim.Horizon(hc.window, depth=-.5, dist=100, color=.3,)
+
+isf = 20*np.pi/180 # inverted sf
+sf = dist/isf
+tfs = np.array([0.1, .2, .5, 1, 2, 5, 10, 20, 50, 100], dtype=float)
+
+gratings = []
+garr = np.array([[-1,1,1,-1],[-1,-1,1,1], [-2,-2,-2,-2]])
+for tf in tfs:
+    for orient in [0*np.pi/2, 2*np.pi/2]:
+        g = hc.stim.Movable_grating(hc.window, garr, sf=sf, tf=tf, o=orient, sd=.25)
+        g.inc_rx(27)
+        gratings.append(g)
+
+estarts = [[hc.window.set_far, 500],
+           [hc.window.reset_pos_rot],
+           [hc.window.set_bg, [0.9, 0.9, 0.9, 1.0]]]
+
+eends = [[hc.window.set_far, 2],
+         [hc.window.set_bg, [0.0, 0.0, 0.0, 1.0]]]
+
+
+hc.scheduler.add_exp(None, estarts, eends)
+
+hors = [True, False]
+
+i = 0
+for grating in gratings:
+    for hor in hors:
+        exp_synch, exp_num = hc.tools.test_bin_flash(i, num_frames)
+        i += 1
+
+        starts =  [[grating.on, True],
+                   [horizon.on, hor]]
+
+        middles = [[grating.next_frame],
+                   [hc.window.set_ref, 0, exp_synch],
+                   [hc.window.set_ref, 1, exp_num]]
+
+        ends = [[grating.on, False],
+                [horizon.on, False]]
+
+        hc.scheduler.add_test(num_frames, starts, middles, ends)
+
+    
+# add the rest
+num_frames = 90
+rbar = hc.stim.cbarr_class(hc.window, dist=1)
+
+starts =  [[hc.arduino.set_lmr_scale,  -.1],
+           [rbar.set_ry,               -90],
+           [rbar.switch,               True],
+           # [pts.replace_region, null_reg]
+           ]
+
+middles = [[rbar.inc_ry,               hc.arduino.lmr],
+           # [pts.move  ],
+           # [pts.move  ],
+           # [hc.window.save_png],
+           ]
+
+ends =    [[rbar.switch,               False]]
+ 
+hc.scheduler.add_rest(num_frames, starts, middles, ends)
+    
