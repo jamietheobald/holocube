@@ -1189,7 +1189,6 @@ class Grating(Movable_Animation):
         self.num_frames = nframes
         phi_ts = np.cumsum(-2 * np.pi * tf_array / float(self.rate))
 
-        print(f'{nframes=}')
         for f in np.arange(nframes):
             lum = 127 * (1 + c * np.sin(phi_ss + phi_ts[f] + phi_i))
             data[:, :, :3] = lum[:, :, None]
@@ -1198,7 +1197,6 @@ class Grating(Movable_Animation):
             frames.append(pyglet.image.ImageData(self.yres, self.xres, 'RGBA', data.tostring()))
 
         # make the animation with all the frames and append it to the list of playable, moving gratings
-        print(f'{len(frames)=}, {self.rate=}, {tf=}')
         self.ani = pyglet.image.Animation.from_image_sequence(frames, 1. / self.rate)
         self.tbin = pyglet.image.atlas.TextureBin()
 
