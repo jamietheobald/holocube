@@ -39,15 +39,15 @@ obj6 = hc.stim.Bar(hc.window,
                    stripes=3,
                    color=[0.8, 0.0, 0.8])
 
-obj7 = hc.stim.STL(hc.window, 'Flower.stl', scale=0.02, color=0.6)
-obj7.set_pz(2)
-
-front_image = hc.stim.Image_File(hc.window, 1, 'front.png', init_pos=[0, 0, -0.65], init_ori=[0, 0, 1])
-left_image = hc.stim.Image_File(hc.window, 1, 'left.png', init_pos=[-0.65, 0, 0], init_ori=[1, 0, 0])
-right_image = hc.stim.Image_File(hc.window, 1, 'right.png', init_pos=[0.65, 0, 0], init_ori=[-1, 0, 0])
-back_image = hc.stim.Image_File(hc.window, 1, 'back.png', init_pos=[0, 0, 0.65], init_ori=[0, 0, -1])
-bottom_image = hc.stim.Image_File(hc.window, 1, 'bottom.png', init_pos=[0, -0.65, 0], init_ori=[0, 1, 0])
-top_image = hc.stim.Image_File(hc.window, 1, 'top.png', init_pos=[0, 0.65, 0], init_ori=[0, -1, 0])
+# obj7 = hc.stim.STL(hc.window, 'Flower.stl', scale=0.02, color=0.6)
+# obj7.set_pz(2)
+#
+# front_image = hc.stim.Image_File(hc.window, 1, 'front.png', init_pos=[0, 0, -0.65], init_ori=[0, 0, 1])
+# left_image = hc.stim.Image_File(hc.window, 1, 'left.png', init_pos=[-0.65, 0, 0], init_ori=[1, 0, 0])
+# right_image = hc.stim.Image_File(hc.window, 1, 'right.png', init_pos=[0.65, 0, 0], init_ori=[-1, 0, 0])
+# back_image = hc.stim.Image_File(hc.window, 1, 'back.png', init_pos=[0, 0, 0.65], init_ori=[0, 0, -1])
+# bottom_image = hc.stim.Image_File(hc.window, 1, 'bottom.png', init_pos=[0, -0.65, 0], init_ori=[0, 1, 0])
+# top_image = hc.stim.Image_File(hc.window, 1, 'top.png', init_pos=[0, 0.65, 0], init_ori=[0, -1, 0])
 
 # im = pyglet.image.load('front.png')
 # ss = pyglet.sprite.Sprite(im, 0,0,-4, batch=hc.window.batch)
@@ -84,13 +84,13 @@ starts = [[hc.window.set_far, 10],
           [obj4.switch, True],
           [obj5.switch, True],
           [obj6.switch, True],
-          [obj7.switch, True],
-          [front_image.switch, True],
-          [right_image.switch, True],
-          [left_image.switch, True],
-          [bottom_image.switch, True],
-          [top_image.switch, True],
-          [back_image.switch, True],
+          # [obj7.switch, True],
+          # [front_image.switch, True],
+          # [right_image.switch, True],
+          # [left_image.switch, True],
+          # [bottom_image.switch, True],
+          # [top_image.switch, True],
+          # [back_image.switch, True],
           ]
 
 middles = [
@@ -110,14 +110,14 @@ ends = [
     [obj4.switch, False],
     [obj5.switch, False],
     [obj6.switch, False],
-    [obj7.switch, False],
+    # [obj7.switch, False],
     [obj8.switch, False],
-    [front_image.switch, False],
-    [right_image.switch, False],
-    [left_image.switch, False],
-    [bottom_image.switch, False],
-    [top_image.switch, False],
-    [back_image.switch, False],
+    # [front_image.switch, False],
+    # [right_image.switch, False],
+    # [left_image.switch, False],
+    # [bottom_image.switch, False],
+    # [top_image.switch, False],
+    # [back_image.switch, False],
     [hc.control.restore_keys],
     [hc.window.set_far, 2],
     [hc.window.reset_pos_rot]]

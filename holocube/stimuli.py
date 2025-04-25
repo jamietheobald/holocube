@@ -36,6 +36,36 @@ PYGLET_MAJOR = int(PYGLET_VERSION.split('.')[0])
 # are provided by
 #  shader_program["projection"] = self.window.projection
 # any variable not in main will be removed from source
+
+
+# class GraphicsInitGuard:
+#     initialized = False
+#
+#     @classmethod
+#     def ensure_initialized(cls, shader_program, batch):
+#         if not cls.initialized:
+#             print("[GraphicsInitGuard] Initializing dummy vertex list to prime OpenGL state.")
+#             shader_program.vertex_list(
+#                 count=1,
+#                 mode=GL_POINTS,
+#                 batch=batch,
+#                 vertices=('f', [0.0, 0.0, 0.0])
+#             )
+#             cls.initialized = True
+
+vertex_source_i = """#version 330 core
+layout (location = 0) in vec3 vertices;
+void main() {
+    gl_Position = vec4(vertices, 1.0);
+}"""
+
+fragment_source_i = """#version 330 core
+out vec4 FragColor;
+void main() {
+    FragColor = vec4(1.0);
+}
+"""
+
 vertex_source_c = """#version 330 core
 
 layout (location = 0) in vec3 vertices;
@@ -87,17 +117,17 @@ void main() {
 }
 """
 
-fragment_source_t = """#version 330 core
-
-in vec2 tex_coordsf;
-
-out vec4 FragColor;
-
-uniform sampler2D sampTexture;
-
-void main() {
-    FragColor = texture(sampTexture, tex_coordsf);
-}"""
+# fragment_source_t = """#version 330 core
+#
+# in vec2 tex_coordsf;
+#
+# out vec4 FragColor;
+#
+# uniform sampler2D sampTexture;
+#
+# void main() {
+#     FragColor = texture(sampTexture, tex_coordsf);
+# }"""
 
 fragment_source_t = """#version 330 core
 in vec2 TexCoords;
@@ -260,6 +290,11 @@ class Movable(pyglet.graphics.Group):
         elif not onstate and self.visible:
             self.remove()
 
+    def set_verts(self, xs, ys, zs):
+        """Set the vertex list by a method, so we don't accidentially make it
+        a float64."""
+        self.verts = np.asarray([xs, ys, zs], dtype='f4')
+
     def set_pos(self, pos):
         self.pos[:] = pos
 
@@ -345,10 +380,10 @@ class Movable(pyglet.graphics.Group):
         if self.visible:
             self.vl.vertices[2::3] = self.verts[2]
 
-    def set_verts(self, verts):
-        self.verts = verts
-        if self.visible:
-            self.vl.vertices[:] = self.verts.T.ravel()
+    # def set_verts(self, verts):
+    #     self.verts = verts
+    #     if self.visible:
+    #         self.vl.vertices[:] = self.verts.T.ravel()
 
     def get_rx(self):
         return self.rot[0]
@@ -437,6 +472,7 @@ class Movable_Color(Movable):
         if not (isinstance(self.colors, np.ndarray) and self.colors.shape == (4, self.num)):
             self.set_colors()
 
+        # self.shader_program.use()
         self.vl = self.shader_program.vertex_list_indexed(
             count=self.num,
             mode=self.gl_type,
@@ -523,7 +559,6 @@ class Movable_Texture(Movable):
 
         vs = vertex_source_t
         fs = fragment_source_t
-
         self.vert_shader = Shader(vs, 'vertex')
         self.frag_shader = Shader(fs, 'fragment')
         self.shader_program = ShaderProgram(self.vert_shader, self.frag_shader)
@@ -590,14 +625,19 @@ class Movable_Animation(Movable):
 
         self.tex_coords = tex_coords
         if self.tex_coords is None:
-            self.tex_coords = np.array([[0., 1., 1., 0.], [0., 0., 1., 1.]])
+            self.tex_coords = np.array([[0., 1., 1., 0.], [0., 0., 1., 1.]], dtype='f4')
 
         vs = vertex_source_t
         fs = fragment_source_t
-
         self.vert_shader = Shader(vs, 'vertex')
         self.frag_shader = Shader(fs, 'fragment')
         self.shader_program = ShaderProgram(self.vert_shader, self.frag_shader)
+
+        vs = vertex_source_c
+        fs = fragment_source_c
+        self.vert_shader_init = Shader(vs, 'vertex')
+        self.frag_shader_init = Shader(fs, 'fragment')
+        self.dummy_shader = ShaderProgram(self.vert_shader_init, self.frag_shader_init)
 
         # this is to allow updating all vpblock (view and projection
         # for each viewport) with just one call in windows.py
@@ -613,6 +653,8 @@ class Movable_Animation(Movable):
         which will generate automatically if not provided
 
         """
+        self.window.switch_to()
+
         self.vl = self.shader_program.vertex_list_indexed(
             count=self.num,
             mode=self.gl_type,
@@ -650,6 +692,7 @@ class Movable_Animation(Movable):
         trans_mat = Mat4.from_translation(Vec3(*self.pos))
 
         self.shader_program.use()
+        self.shader_program['texture1'] = 0
         self.shader_program["model"] = trans_mat @ rot_mat_z @ rot_mat_y @ rot_mat_x
 
     def unset_state(self):
@@ -716,7 +759,8 @@ class Points(Movable_Color):
 
         # if the verts are specified, assign them
         if verts is not None:
-            self.verts = np.array([verts[0], verts[1], verts[2]])
+            # self.verts = np.array([verts[0], verts[1], verts[2]], dtype='f4')
+            self.set_verts(*verts)
         else:
             self.shuffle()
 
@@ -750,7 +794,8 @@ class Points(Movable_Color):
             x = r * np.sin(theta) * np.cos(phi)
             y = r * np.sin(theta) * np.sin(phi)
             z = r * np.cos(theta) + 0 * phi  # Ensure broadcast shape
-            self.verts = np.array((x, -z, y))  # OpenGL: y→z, z→-y
+            # self.verts = np.array((x, -z, y))  # OpenGL: y→z, z→-y
+            self.set_verts(x, -z, y)
 
         # Case 2: List or tuple of 2 numbers → cube volume
         elif (
@@ -758,8 +803,8 @@ class Points(Movable_Color):
                 all(isinstance(v, (int, float)) for v in e)
         ):
             x1, x2 = e
-            self.verts = np.random.uniform(x1, x2, [3, self.num])
-
+            # self.verts = np.random.uniform(x1, x2, [3, self.num])
+            self.set_verts(*np.random.uniform(x1, x2, [3, self.num]))
         # Case 3: 3-element list of 2-element sublists → rectangular cuboid
         elif (
                 isinstance(e, (list, tuple)) and len(e) == 3 and
@@ -767,8 +812,8 @@ class Points(Movable_Color):
                     for sub in e)
         ):
             (x1, x2), (x3, x4), (x5, x6) = e
-            self.verts = np.random.uniform([x1, x3, x5], [x2, x4, x6], [self.num, 3]).T
-
+            # self.verts = np.random.uniform([x1, x3, x5], [x2, x4, x6], [self.num, 3]).T
+            self.set_verts(*np.random.uniform([x1, x3, x5], [x2, x4, x6], [self.num, 3]).T)
 
     def set_pt_size(self, pt_size):
         self.pt_size = pt_size
@@ -797,8 +842,10 @@ class Lines(Movable):
         self.tex_coords = None
         if verts is None:
             self.verts = np.random.uniform(-1, 1, [3, self.num])
+            self.set_verts(*np.random.uniform(-1, 1, [3, self.num]))
         else:
             self.verts = verts
+            self.set_verts(*verts)
 
         if add: self.add()
 
@@ -817,8 +864,8 @@ class Lines(Movable):
             r * np.cos(angs)[:, np.newaxis] * u +
             r * np.sin(angs)[:, np.newaxis] * v]).sum(axis=0)  # Sum component-wise
 
-        self.verts = np.roll(circle.repeat(2, 0).T, -1, 1)
-
+        # self.verts = np.roll(circle.repeat(2, 0).T, -1, 1)
+        self.set_verts(*np.roll(circle.repeat(2, 0).T, -1, 1))
 
 class Sphere_Lines(Movable_Color):
     """Perpendicularly oreinted circles to outline a sphere of any radius.
@@ -881,12 +928,16 @@ class Triangles(Movable):
         self.tex_coords = None
 
         if verts is None:
-            self.verts = np.array([[-1, np.sin(np.pi * 2 / 3), np.sin(np.pi * 2 / 3)],
-                                   [0, 0, 0],
-                                   [-1, np.cos(np.pi * 2 / 3), np.cos(np.pi * 2 / 3)]])
+            # self.verts = np.array([[-1, np.sin(np.pi * 2 / 3), np.sin(np.pi * 2 / 3)],
+            #                        [0, 0, 0],
+            #                        [-1, np.cos(np.pi * 2 / 3), np.cos(np.pi * 2 / 3)]])
+            self.setverts(*np.array([[-1, np.sin(np.pi * 2 / 3), np.sin(np.pi * 2 / 3)],
+                                     [0, 0, 0],
+                                     [-1, np.cos(np.pi * 2 / 3), np.cos(np.pi * 2 / 3)]]))
             self.num = 3
         else:
-            self.verts = np.array(verts)
+            # self.verts = np.array(verts)
+            self.set_verts(*np.array(verts))
             self.num = self.verts.shape[1]
 
         self.color = color
@@ -1079,10 +1130,10 @@ class Grating(Movable_Animation):
                  edge_size=1, init_pos=[0, 0, 0], init_ori=[0, 0, 1], add=False):
 
         gl_type = GL_QUADS
-        tex_coords = np.array([[0., 1., 1., 0.], [0., 0., 1., 1.]])
+        tex_coords = np.array([[0., 1., 1., 0.], [0., 0., 1., 1.]], dtype='f4')
 
         es = edge_size / 2
-        verts = np.array([[-es, es, es, -es], [-es, -es, es, es], [0, 0, 0, 0.]])
+        verts = np.array([[-es, es, es, -es], [-es, -es, es, es], [0, 0, 0, 0.]], dtype='f4')
 
         self._order = 0
         verts = rotate_points_to_normal(verts, init_ori)
@@ -1126,7 +1177,7 @@ class Grating(Movable_Animation):
             mask_ss = np.ones([self.xres, self.yres])
 
         # spatial
-        phi_ss = 2 * np.pi * sf * np.cos(self.atans + (o - np.pi / 2)) * self.center_dists
+        phi_ss = 2 * np.pi * sf * np.cos(self.atans + (np.radians(o) - np.pi / 2)) * self.center_dists
 
         # temporal
         if hasattr(tf, '__iter__'):
@@ -1138,6 +1189,7 @@ class Grating(Movable_Animation):
         self.num_frames = nframes
         phi_ts = np.cumsum(-2 * np.pi * tf_array / float(self.rate))
 
+        print(f'{nframes=}')
         for f in np.arange(nframes):
             lum = 127 * (1 + c * np.sin(phi_ss + phi_ts[f] + phi_i))
             data[:, :, :3] = lum[:, :, None]
@@ -1146,6 +1198,7 @@ class Grating(Movable_Animation):
             frames.append(pyglet.image.ImageData(self.yres, self.xres, 'RGBA', data.tostring()))
 
         # make the animation with all the frames and append it to the list of playable, moving gratings
+        print(f'{len(frames)=}, {self.rate=}, {tf=}')
         self.ani = pyglet.image.Animation.from_image_sequence(frames, 1. / self.rate)
         self.tbin = pyglet.image.atlas.TextureBin()
 
@@ -1376,7 +1429,7 @@ class Dot_Cohere_Sph(Movable_Color):
                   'old_inds': np.array([], dtype=np.int64),
                   'curr_inds': np.where(self.gc_distances(cent) < np.radians(radius))[0],
                   'active': active}
-        print(f'add_region  {cent=}, {radius=} {region["curr_inds"]=}')
+        # print(f'add_region  {cent=}, {radius=} {region["curr_inds"]=}')
 
         self.regions.append(region)
 
@@ -1401,7 +1454,7 @@ class Dot_Cohere_Sph(Movable_Color):
         center, radius = region['center'], region['radius']
         region['curr_inds'] = np.where(self.gc_distances(center) < np.radians(radius))[0]
 
-        print(f'activate {ind} {center=} {radius=} {region["curr_inds"]=}')
+        # print(f'activate {ind} {center=} {radius=} {region["curr_inds"]=}')
 
 
     def deactivate_region(self, ind=None):
@@ -1514,9 +1567,8 @@ class Dot_Cohere_Sph(Movable_Color):
                 reg_ind = pt_ind
             az, el = self.regions[reg_ind]['azimuth'], self.regions[reg_ind]['elevation']
             x,y,z = azel_to_cart(az, el)
-            print(f'{x,y,z=}')
+            # print(f'{x,y,z=}')
             self.verts[:,pt_ind] = x,y,z
-            # self.verts[:,pt_ind] = 0,0,-1
 
 
     def update_coherence(self, reg_ind, coherence):
@@ -1616,7 +1668,8 @@ class Dot_Cohere_Sph(Movable_Color):
         # self.verts = np.zeros((3, num))
         if num is None:
             num = self.num
-        self.verts = self.rand_pts(num)
+        # self.verts = self.rand_pts(num)
+        self.set_verts(*self.rand_pts(num))
 
         # initial directions
         self.uvecs = np.zeros((3, num))
@@ -1762,9 +1815,9 @@ class Dot_Cohere_Sph(Movable_Color):
             # have points entered or exited the region?
             entered = np.setdiff1d(region['curr_inds'], region['old_inds'])
             exited = np.setdiff1d(region['old_inds'], region['curr_inds'])
-            if len(entered)>0:
-                print(f'{entered=}')
-
+            # if len(entered)>0:
+            #     print(f'{entered=}')
+            
             if regen:
                 # if points are recycled in the region,
                 # first, boot out the ones that entered
