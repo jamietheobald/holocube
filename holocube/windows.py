@@ -56,7 +56,7 @@ class Viewport:
         self.tilt = tilt
         self.dutch = dutch
         # calculate the intrinsic camera rotation matrix
-        self.set_cam_rot_mat()
+        self.cam_rot_mat = self.set_cam_rot_mat()
         # self.rmat = dot(rotmat([0.,1.,0.], azimuth), rotmat([1.,0.,0.], elevation))
         self.projection = projection  # orthographic or perspective projection, or ref
         # self.rotmat = dot(rotmat([0., 1., 0.], pan*pi/180), rotmat([1., 0., 0.], tilt*pi/180))
@@ -87,14 +87,19 @@ class Viewport:
         faster than using rotate methods on a Mat4s.
 
         """
-        sint, cost = np.sin(self.pan * np.pi / 180), np.cos(self.pan * np.pi / 180)
+        # to do these only once, get the radians
+        pan_rad = np.radians(self.pan)
+        tilt_rad = np.radians(self.tilt)
+        dutch_rad = np.radians(self.dutch)
+        # and each matrix
+        sint, cost = np.sin(pan_rad), np.cos(pan_rad)
         pan_mat = np.array([[cost, 0, sint], [0, 1, 0], [-sint, 0, cost]])  # yaw of the camera
-        sint, cost = np.sin(self.tilt * np.pi / 180), np.cos(self.tilt * np.pi / 180)
+        sint, cost = np.sin(tilt_rad), np.cos(tilt_rad)
         tilt_mat = np.array([[1, 0, 0], [0, cost, -sint], [0, sint, cost]])  # pitch of the camera
-        sint, cost = np.sin(self.dutch * np.pi / 180), np.cos(self.dutch * np.pi / 180)
+        sint, cost = np.sin(dutch_rad), np.cos(dutch_rad)
         dutch_mat = np.array([[cost, -sint, 0], [sint, cost, 0], [0, 0, 1]])  # dutch (roll) of the camera
-        self.cam_rot_mat = np.dot(np.dot(dutch_mat, tilt_mat), pan_mat)
-        print('cam_rot_mat')
+
+        return dutch_mat @ tilt_mat @ pan_mat
 
     def view_perspective(self, pos, rot):
         """calculate the view for a given
@@ -118,43 +123,52 @@ class Viewport:
     def set_val(self, field, val, increment=False):
         """Set any of the viewport positional and rotational parameters by
         name"""
-        # viewport params
-        if field == 'left':
-            self.coords[0] = self.coords[0] * increment + val
-        elif field == 'bottom':
-            self.coords[1] = self.coords[1] * increment + val
-        elif field == 'width':
-            self.coords[2] = self.coords[2] * increment + val
-        elif field == 'height':
-            self.coords[3] = self.coords[3] * increment + val
+        match field:
+            case 'left':
+                self.coords[0] = self.coords[0] * increment + val
+            case 'bottom':
+                self.coords[1] = self.coords[1] * increment + val
+            case 'width':
+                self.coords[2] = self.coords[2] * increment + val
+            case 'height':
+                self.coords[3] = self.coords[3] * increment + val
         # projection params
-        elif field == 'near':
-            self.frustum[4] = self.frustum[4] * increment + val
-        elif field == 'far':
-            self.frustum[5] = self.frustum[5] * increment + val
-
-        elif field == 'scalex':
-            self.scale_factors[0] *= -1
-        elif field == 'scaley':
-            self.scale_factors[1] *= -1
-        elif field == 'scalez':
-            self.scale_factors[2] *= -1
-        # cam angles to the viewport
-        elif field == 'pan':
-            self.pan = self.pan * increment + val
-            self.set_cam_rot_mat()
-        elif field == 'tilt':
-            self.tilt = self.tilt * increment + val
-            self.set_cam_rot_mat()
-        elif field == 'dutch':
-            self.dutch = self.dutch * increment + val
-            self.set_cam_rot_mat()
-        # background color
-        elif field == 'bg':
-            self.clear_color[0] = self.clear_color[0] * increment + val[0]
-            self.clear_color[1] = self.clear_color[1] * increment + val[1]
-            self.clear_color[2] = self.clear_color[2] * increment + val[2]
-            self.clear_color[3] = self.clear_color[3] * increment + val[3]
+            case 'fleft':
+                self.frustum[0] = self.frustum[0] * increment + val
+                print(f'{self.frustum[0]}')
+            case 'fright':
+                self.frustum[1] = self.frustum[1] * increment + val
+            case 'fbottom':
+                self.frustum[2] = self.frustum[2] * increment + val
+            case 'ftop':
+                self.frustum[3] = self.frustum[3] * increment + val
+            case 'near':
+                self.frustum[4] = self.frustum[4] * increment + val
+            case 'far':
+                self.frustum[5] = self.frustum[5] * increment + val
+            # scaling for mirror reflections
+            case 'scalex':
+                self.scale_factors[0] *= -1
+            case 'scaley':
+                self.scale_factors[1] *= -1
+            case 'scalez':
+                self.scale_factors[2] *= -1
+            # cam angles to the viewport
+            case 'pan':
+                self.pan = self.pan * increment + val
+                self.set_cam_rot_mat()
+            case 'tilt':
+                self.tilt = self.tilt * increment + val
+                self.set_cam_rot_mat()
+            case 'dutch':
+                self.dutch = self.dutch * increment + val
+                self.set_cam_rot_mat()
+            # background color
+            case 'bg':
+                self.clear_color[0] = self.clear_color[0] * increment + val[0]
+                self.clear_color[1] = self.clear_color[1] * increment + val[1]
+                self.clear_color[2] = self.clear_color[2] * increment + val[2]
+                self.clear_color[3] = self.clear_color[3] * increment + val[3]
 
         # set the projection matrix
         [left, right, bottom, top, near, far] = self.frustum
@@ -215,7 +229,7 @@ def dict_key(key):
     return tuple(key)  # in case we passed a list, change it to an immutable tuple
 
 
-class Holocube_window(pyglet.window.Window):
+class Holocube_Window(pyglet.window.Window):
     """Subclass of pyglet's window, for displaying all the viewports
     with experimental stimuli
 

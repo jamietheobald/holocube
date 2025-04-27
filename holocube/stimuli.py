@@ -7,7 +7,6 @@ import stl requires: pip install numpy-stl
 
 # lightspeed design 360 projector displays in the order b r g Frames
 
-
 import pyglet
 from pyglet.gl import *
 from pyglet.graphics.shader import Shader, ShaderProgram
@@ -19,52 +18,23 @@ import stl
 import numbers
 import scipy.stats
 
-# from typing import Optional
 # Detect pyglet version
 PYGLET_VERSION = pyglet.version
 PYGLET_MAJOR = int(PYGLET_VERSION.split('.')[0])
 
-# vertex and shader source code
-# use #version 330 core
 #
-# these are given in the vertex list call:
-#  layout (location = 0) in vec3 position
-#  layout (location = 0) in vec3 position
+# vertex_source_i = """#version 330 core
+# layout (location = 0) in vec3 vertices;
+# void main() {
+#     gl_Position = vec4(vertices, 1.0);
+# }"""
 #
-# uniforms, such as
-#  uniform mat4 projection;
-# are provided by
-#  shader_program["projection"] = self.window.projection
-# any variable not in main will be removed from source
-
-
-# class GraphicsInitGuard:
-#     initialized = False
-#
-#     @classmethod
-#     def ensure_initialized(cls, shader_program, batch):
-#         if not cls.initialized:
-#             print("[GraphicsInitGuard] Initializing dummy vertex list to prime OpenGL state.")
-#             shader_program.vertex_list(
-#                 count=1,
-#                 mode=GL_POINTS,
-#                 batch=batch,
-#                 vertices=('f', [0.0, 0.0, 0.0])
-#             )
-#             cls.initialized = True
-
-vertex_source_i = """#version 330 core
-layout (location = 0) in vec3 vertices;
-void main() {
-    gl_Position = vec4(vertices, 1.0);
-}"""
-
-fragment_source_i = """#version 330 core
-out vec4 FragColor;
-void main() {
-    FragColor = vec4(1.0);
-}
-"""
+# fragment_source_i = """#version 330 core
+# out vec4 FragColor;
+# void main() {
+#     FragColor = vec4(1.0);
+# }
+# """
 
 vertex_source_c = """#version 330 core
 
@@ -117,18 +87,6 @@ void main() {
 }
 """
 
-# fragment_source_t = """#version 330 core
-#
-# in vec2 tex_coordsf;
-#
-# out vec4 FragColor;
-#
-# uniform sampler2D sampTexture;
-#
-# void main() {
-#     FragColor = texture(sampTexture, tex_coordsf);
-# }"""
-
 fragment_source_t = """#version 330 core
 in vec2 TexCoords;
 out vec4 FragColor;
@@ -139,6 +97,65 @@ void main()
     FragColor = texture(texture1, TexCoords);
 }
 """
+
+vertex_source_l = """#version 330 core
+
+layout (location = 0) in vec3 vertices;
+layout (location = 1) in vec4 colors;
+layout (location = 2) in vec3 normals;
+
+out vec4 frag_color;
+out vec3 frag_normal;
+out vec3 frag_pos;
+
+uniform vpBlock {
+    uniform mat4 projection;
+    uniform mat4 view;
+} viewport;
+
+uniform mat4 model;
+
+void main() {
+    vec4 world_pos = model * vec4(vertices, 1.0);
+    gl_Position = viewport.projection * viewport.view * world_pos;
+
+    frag_color = colors;
+
+    // Normal transformation (ignore scaling for now)
+    frag_normal = mat3(transpose(inverse(model))) * normals;
+    frag_pos = world_pos.xyz;
+    }
+"""
+
+fragment_source_l = """#version 330 core
+
+in vec4 frag_color;
+in vec3 frag_normal;
+in vec3 frag_pos;
+
+out vec4 FragColor;
+
+uniform vec3 light_pos;
+uniform float ambient_strength;  // e.g., 0.2
+
+void main() {
+    // Normalize vectors
+    vec3 norm = normalize(frag_normal);
+    vec3 light_dir = normalize(light_pos - frag_pos);  // Direction to the light
+
+    // Diffuse shading (Lambertian)
+    float diff = max(dot(norm, light_dir), 0.0);
+
+    // Ambient and diffuse contributions
+    vec3 ambient = ambient_strength * frag_color.rgb;
+    vec3 diffuse = diff * frag_color.rgb;
+
+    vec3 final_color = ambient + diffuse;
+
+    FragColor = vec4(final_color, frag_color.a);
+}
+"""
+
 
 
 def cm_soapbubble(x, y, alpha=1.0):
@@ -252,7 +269,7 @@ class Movable(pyglet.graphics.Group):
         self.poss = np.array([[0, 0, 0.]])
 
         self.gl_type = gl_type
-        self.verts = np.array(verts)
+        self.verts = np.array(verts, dtype='f4')
         self.num = self.verts.shape[1]
 
         # if we have no vertex list, make a simple one
@@ -466,13 +483,12 @@ class Movable_Color(Movable):
         which will generate automatically if not provided
 
         """
-        # if we don't have a proper color array yet, set one
         self.window.switch_to()
 
+        # if we don't have a proper color array yet, set one
         if not (isinstance(self.colors, np.ndarray) and self.colors.shape == (4, self.num)):
             self.set_colors()
 
-        # self.shader_program.use()
         self.vl = self.shader_program.vertex_list_indexed(
             count=self.num,
             mode=self.gl_type,
@@ -609,7 +625,6 @@ class Movable_Texture(Movable):
         return id(self) == id(other)
 
     def __repr__(self):
-        # return '%s(id=%d)' % (self.__class__.__name__, self.texture.id)
         return '%s' % (self.__class__.__name__)
 
 
@@ -708,6 +723,7 @@ class Movable_Animation(Movable):
     def __repr__(self):
         return f'{self.__class__.__name__=}'
 
+
 # TODO add normals and lighting input
 class Movable_Lighted(Movable):
     """A movable object where vertixes have normals, and the environment both
@@ -716,13 +732,14 @@ class Movable_Lighted(Movable):
     """
 
     def __init__(self, window, gl_type, verts, vert_inds=None,
-                 colors=None, add=False):
+                 normals=None, colors=None, add=False):
         super().__init__(window, gl_type, verts, vert_inds)
 
+        self.normals = normals
         self.colors = colors
 
-        vs = vertex_source_c
-        fs = fragment_source_c
+        vs = vertex_source_l
+        fs = fragment_source_l
 
         self.vert_shader = Shader(vs, 'vertex')
         self.frag_shader = Shader(fs, 'fragment')
@@ -736,6 +753,91 @@ class Movable_Lighted(Movable):
 
         if add: self.add()
 
+    def add(self):
+        """Use the shader program to add the vertex list to the
+        window's batch. This version also requires an index list,
+        which will generate automatically if not provided
+
+        """
+        self.window.switch_to()
+
+        if not (isinstance(self.colors, np.ndarray) and self.colors.shape == (4, self.num)):
+            self.set_colors()
+
+        self.vl = self.shader_program.vertex_list_indexed(
+            count=self.num,
+            mode=self.gl_type,
+            indices=self.vert_inds,
+            batch=self.window.batch,
+            group=self,
+            vertices=('f', self.verts.T.flatten()),
+            colors=('f', self.colors.T.flatten()),
+            # normals = ('normals3f/static', self.normals.T.flatten())
+            normals = ('f', self.normals.T.flatten())
+        )
+
+        self.visible = True
+
+    def set_colors(self):
+        """Take the self.colors attribute and reassign it to an array
+        of the length 4 * self.num
+
+        """
+        # do we have a single number? if so, set to gray
+        if isinstance(self.colors, str) and self.colors == 'ring':
+            angs = np.linspace(0, 2 * np.pi, self.num, endpoint=False)
+            self.colors = cm_soapbubble(.5, angs)
+        elif isinstance(self.colors, str) and self.colors == 'ring0':
+            angs = np.linspace(0, 2 * np.pi, self.num, endpoint=True)
+            self.colors = cm_soapbubble(.5, angs)
+            self.colors[:, -1] = [0, 0, 0, 1.]
+        elif isinstance(self.colors, str) and self.colors == 'ring1':
+            angs = np.linspace(0, 2 * np.pi, self.num, endpoint=True)
+            self.colors = cm_soapbubble(.5, angs)
+            self.colors[:, -1] = [1, 1, 1, 1.]
+        elif isinstance(self.colors, numbers.Real):
+            self.colors = np.array([[*[self.colors] * 3, 1.0]] * self.num).T
+        # if we have a 3 tuple of numbers, 1 color for all verts
+        elif hasattr(self.colors, '__len__') and \
+                len(self.colors) == 3 and \
+                isinstance(self.colors[0], numbers.Real):
+            self.colors = np.array([[*self.colors, 1.0]] * self.num)
+        # if we have a 4 tuple of numbers, 1 color for all verts
+        elif hasattr(self.colors, '__len__') and \
+                len(self.colors) == 4 and \
+                isinstance(self.colors[0], numbers.Real):
+            self.colors = np.array([[*self.colors]] * self.num)
+        # if we have list of 3 tuples
+        elif hasattr(self.colors, '__len__') and \
+                hasattr(self.colors[0], '__len__') and \
+                len(self.colors[0]) == 3:
+            self.colors = np.array([[*c, 1.0] for c in self.colors]).T
+        # if we have list of 4 tuples
+        elif hasattr(self.colors, '__len__') and \
+                hasattr(self.colors[0], '__len__') and \
+                len(self.colors[0]) == 4:
+            self.colors = np.array([[*c] for c in self.colors]).T
+        # if None or something else, use white
+        else:
+            self.colors = np.array([[1.0] * self.num] * 4)
+
+    def set_state(self):
+        super().set_state()
+        self.shader_program["light_pos"] = self.light_pos
+        self.shader_program["ambient_strength"] = self.ambient_strength
+
+    def unset_state(self):
+        super().unset_state()
+
+    def __hash__(self):
+        return hash(id(self))
+        # return hash((self.texture.target, self.texture.id, self.order, self.parent))
+
+    def __eq__(self, other):
+        return id(self) == id(other)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__=}'
 
 
 
@@ -1205,12 +1307,13 @@ class Grating(Movable_Animation):
         self.gratings.append(pyglet.image.Animation.from_image_sequence(frames, 1. / self.rate))
 
 
-class STL(Movable_Color):
+class STL(Movable_Lighted):
     """Get all the vertices from an stl file
 
     """
 
-    def __init__(self, window, fn, color=1.0, scale=1, add=False):
+    def __init__(self, window, fn, color=1.0, scale=1,
+                 light_pos=(1.,1.,1.), ambient_strength=0.2, add=False):
         stl_mesh = stl.mesh.Mesh.from_file(fn)
 
         xs = stl_mesh.vectors[:, :, 0].ravel()
@@ -1219,11 +1322,20 @@ class STL(Movable_Color):
 
         verts = np.array([xs * scale, ys * scale, zs * scale])
 
+        xns = np.repeat(stl_mesh.normals[:, 0].ravel(), 3)
+        yns = np.repeat(stl_mesh.normals[:, 1].ravel(), 3)
+        zns = np.repeat(stl_mesh.normals[:, 2].ravel(), 3)
+        normals = np.array([xns, yns, zns], dtype='f4')
+
+        self.light_pos = light_pos
+        self.ambient_strength = ambient_strength
+
         super().__init__(
             window=window,
             gl_type=GL_TRIANGLES,
             verts=verts,
             vert_inds=None,
+            normals = normals,
             colors=color,
             add=add)
 

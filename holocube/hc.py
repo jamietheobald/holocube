@@ -10,6 +10,6 @@ import holocube.tools as tools
 
 # objects we need in run and exps
 control = control.Control_Window()
-window = windows.Holocube_window()
+window = windows.Holocube_Window()
 scheduler = schedulers.Scheduler()
 arduino = ard.Arduino()

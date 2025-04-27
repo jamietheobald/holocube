@@ -53,6 +53,10 @@ starts = [[hc.window.set_far, 5],
           [hc.control.add_key_action, 'shift ctrl right', [hc.window.viewport_set_val, 'dutch', 1, 'increment'], 'hold'],
           [hc.control.add_key_action, 'x', [hc.window.viewport_set_val, 'scalex', 1, 'increment']],
           [hc.control.add_key_action, 'y', [hc.window.viewport_set_val, 'scaley', 1, 'increment']],
+          [hc.control.add_key_action, '9', [hc.window.viewport_set_val, 'fleft', .01, 'increment']],
+          [hc.control.add_key_action, '0', [hc.window.viewport_set_val, 'fleft', -.01, 'increment']],
+          [hc.control.add_key_action, '[', [hc.window.viewport_set_val, 'fright', .01, 'increment']],
+          [hc.control.add_key_action, ']', [hc.window.viewport_set_val, 'fright', -.01, 'increment']],
           [hc.control.add_key_action, 'enter', [hc.window.save_config, 'test_viewport.config']]
           ]
 
