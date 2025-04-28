@@ -397,11 +397,6 @@ class Movable(pyglet.graphics.Group):
         if self.visible:
             self.vl.vertices[2::3] = self.verts[2]
 
-    # def set_verts(self, verts):
-    #     self.verts = verts
-    #     if self.visible:
-    #         self.vl.vertices[:] = self.verts.T.ravel()
-
     def get_rx(self):
         return np.degrees(self.rot[0])
 
@@ -887,7 +882,7 @@ class Points(Movable_Color):
             e = 1
 
         # Case 1: Single number → spherical volume
-        if isinstance(e, (int, float)):
+        if isinstance(e, (int, float, np.integer, np.floating)):
             rad = e
             r = np.random.uniform(0, 1, self.num) ** (1 / 3) * rad
             phi = np.random.uniform(-np.pi, np.pi, self.num)
@@ -1982,51 +1977,51 @@ class Dot_Cohere_Sph(Movable_Color):
 
 
 
-# class Deadleaf():
-#     """Randomly distributed disks, overlapping.
+class Deadleaf():
+    """Randomly distributed disks, overlapping.
 
-#     """
-#     def __init__(self, window, num=500, color=[.7,.8,.9], add=False):
-#         self.leaves = []
-#         self.mots = []
-#         for i in range(num):
-#             col = np.random.uniform(color[0],color[1])
-#             size = np.random.uniform(5,20)
-#             s = Spherical_segment(window, color=col, polang_bot=size,
-#                                   radius=1+i/(10*num))
-#             s.set_rx(np.random.uniform(0,360))
-#             s.set_rz(np.random.uniform(0,360))
+    """
+    def __init__(self, window, num=500, color=[.7,.8,.9], add=False):
+        self.leaves = []
+        self.mots = []
+        for i in range(num):
+            col = np.random.uniform(color[0],color[1])
+            size = np.random.uniform(5,20)
+            s = Spherical_Segment(window, color=col, polang_bot=size,
+                                  radius=1+i/(10*num))
+            s.set_rx(np.random.uniform(0,360))
+            s.set_rz(np.random.uniform(0,360))
 
-#             self.leaves.append(s)
-#             self.mots.append(np.random.randn(3))
-#             self.flower = Spherical_segment(window, color=color[2], polang_bot=20,
-#                                            radius=.95)
-#             self.flower.set_rx(-90)
+            self.leaves.append(s)
+            self.mots.append(np.random.randn(3))
+            self.flower = Spherical_segment(window, color=color[2], polang_bot=20,
+                                           radius=.95)
+            self.flower.set_rx(-90)
 
 
-#     def add(self, arg):
-#         for leaf in self.leaves:
-#             leaf.add(arg)
-#         self.flower.add(arg)
+    def add(self, arg):
+        for leaf in self.leaves:
+            leaf.add(arg)
+        self.flower.add(arg)
 
-#     def on(self, arg):
-#         for leaf in self.leaves:
-#             leaf.on(arg)
-#         self.flower.on(arg)
+    def on(self, arg):
+        for leaf in self.leaves:
+            leaf.on(arg)
+        self.flower.on(arg)
 
-#     def set_flower_color(self, color):
-#         self.flower.set_colorf(color)
+    def set_flower_color(self, color):
+        self.flower.set_colorf(color)
 
-#     def move_back(self):
-#         for mot,leaf in zip(self.mots, self.leaves):
-#             leaf.inc_rx(mot[0])
-#             leaf.inc_ry(mot[1])
-#             leaf.inc_rz(mot[2])
+    def move_back(self):
+        for mot,leaf in zip(self.mots, self.leaves):
+            leaf.inc_rx(mot[0])
+            leaf.inc_ry(mot[1])
+            leaf.inc_rz(mot[2])
 
-#     def move_flower(self, rx=0, ry=0, rz=0):
-#         self.flower.inc_rz(rx)
-#         self.flower.inc_rx(ry)
-#         self.flower.inc_ry(rz)
+    def move_flower(self, rx=0, ry=0, rz=0):
+        self.flower.inc_rz(rx)
+        self.flower.inc_rx(ry)
+        self.flower.inc_ry(rz)
 
 
 
