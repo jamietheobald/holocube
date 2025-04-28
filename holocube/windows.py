@@ -610,21 +610,43 @@ class Holocube_Window(pyglet.window.Window):
         """Increment the z position (forward and backward) of the viewpoint"""
         self.pos[2] += dis
 
+    def set_rx(self, ang=0):
+        """Set the current heading around global the x axis. This erases
+        other rotation, so may produce odd results if the viewer is already
+        rotated"""
+        sint, cost = np.sin(np.radians(ang)), np.cos(np.radians(ang))
+        self.rot = np.array([[1, 0, 0], [0, cost, -sint], [0, sint, cost]])
+
+
+    def set_ry(self, ang=0):
+        """Set the current heading around global the y axis. This erases
+        other rotation, so may produce odd results if the viewer is already
+        rotated"""
+        sint, cost = np.sin(np.radians(ang)), np.cos(np.radians(ang))
+        self.rot = np.array([[cost, 0, sint], [0, 1, 0], [-sint, 0, cost]])
+
+    def set_rz(self, ang=0):
+        """Set the current heading around global the z axis. This erases
+        other rotation, so may produce odd results if the viewer is already
+        rotated"""
+        sint, cost = np.sin(np.radians(ang)), np.cos(np.radians(ang))
+        self.rot = np.array([[cost, -sint, 0], [sint, cost, 0], [0, 0, 1]])
+
     def inc_rx(self, ang=0):
         """Increment current heading around the global x axis"""
-        sint, cost = np.sin(ang), np.cos(ang)
+        sint, cost = np.sin(np.radians(ang)), np.cos(np.radians(ang))
         mat = np.array([[1, 0, 0], [0, cost, -sint], [0, sint, cost]])
         np.dot(mat, self.rot, out=self.rot)
 
     def inc_ry(self, ang=0):
         """Increment current heading around the global y axis"""
-        sint, cost = np.sin(ang), np.cos(ang)
+        sint, cost = np.sin(np.radians(ang)), np.cos(np.radians(ang))
         mat = np.array([[cost, 0, sint], [0, 1, 0], [-sint, 0, cost]])
         np.dot(mat, self.rot, out=self.rot)
 
     def inc_rz(self, ang=0):
         """Increment current heading around the global z axis"""
-        sint, cost = np.sin(ang), np.cos(ang)
+        sint, cost = np.sin(np.radians(ang)), np.cos(np.radians(ang))
         mat = np.array([[cost, -sint, 0], [sint, cost, 0], [0, 0, 1]])
         np.dot(mat, self.rot, out=self.rot)
 
@@ -643,19 +665,19 @@ class Holocube_Window(pyglet.window.Window):
 
     def inc_pitch(self, ang=0):
         """Increment current heading in pitch"""
-        sint, cost = np.sin(ang), np.cos(ang)
+        sint, cost = np.sin(np.radians(ang)), np.cos(np.radians(ang))
         mat = np.array([[1, 0, 0], [0, cost, -sint], [0, sint, cost]])
         np.dot(self.rot, mat, out=self.rot)
 
     def inc_yaw(self, ang=0):
         """Increment current heading in yaw"""
-        sint, cost = np.sin(ang), np.cos(ang)
+        sint, cost = np.sin(np.radians(ang)), np.cos(np.radians(ang))
         mat = np.array([[cost, 0, sint], [0, 1, 0], [-sint, 0, cost]])
         np.dot(self.rot, mat, out=self.rot)
 
     def inc_roll(self, ang=0):
         """Increment current heading in roll"""
-        sint, cost = np.sin(ang), np.cos(ang)
+        sint, cost = np.sin(np.radians(ang)), np.cos(np.radians(ang))
         mat = np.array([[cost, -sint, 0], [sint, cost, 0], [0, 0, 1]])
         np.dot(self.rot, mat, out=self.rot)
 

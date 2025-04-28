@@ -316,7 +316,7 @@ class Movable(pyglet.graphics.Group):
         self.pos[:] = pos
 
     def set_rot(self, rot):
-        self.rot[:] = rot
+        self.rot[:] = np.radians(rot)
 
     def set_px(self, x):
         self.pos[0] = x
@@ -328,13 +328,13 @@ class Movable(pyglet.graphics.Group):
         self.pos[2] = z
 
     def set_rx(self, x):
-        self.rot[0] = x
+        self.rot[0] = np.radians(x)
 
     def set_ry(self, y):
-        self.rot[1] = y
+        self.rot[1] = np.radians(y)
 
     def set_rz(self, z):
-        self.rot[2] = z
+        self.rot[2] = np.radians(z)
 
     def inc_px(self, x=.01):
         self.pos[0] += x
@@ -346,13 +346,13 @@ class Movable(pyglet.graphics.Group):
         self.pos[2] += z
 
     def inc_rx(self, x=np.pi / 180):
-        self.rot[0] += x
+        self.rot[0] += np.radians(x)
 
     def inc_ry(self, y=np.pi / 180):
-        self.rot[1] += y
+        self.rot[1] += np.radians(y)
 
     def inc_rz(self, z=np.pi / 180):
-        self.rot[2] += z
+        self.rot[2] += np.radians(z)
 
     def update_pos_ind(self, dt=0.0):
         np.take(self.poss, [self.ind], out=self.pos, mode='wrap')
@@ -403,13 +403,13 @@ class Movable(pyglet.graphics.Group):
     #         self.vl.vertices[:] = self.verts.T.ravel()
 
     def get_rx(self):
-        return self.rot[0]
+        return np.degrees(self.rot[0])
 
     def get_ry(self):
-        return self.rot[1]
+        return np.degrees(self.rot[1])
 
     def get_rz(self):
-        return self.rot[2]
+        return np.degrees(self.rot[2])
 
     def get_px(self):
         return self.pos[0]
@@ -724,9 +724,9 @@ class Movable_Animation(Movable):
         return f'{self.__class__.__name__=}'
 
 
-# TODO add normals and lighting input
+
 class Movable_Lighted(Movable):
-    """A movable object where vertixes have normals, and the environment both
+    """A movable object where vertexes have normals, and the environment both
     directional and diffuse lighting.
 
     """
@@ -861,7 +861,6 @@ class Points(Movable_Color):
 
         # if the verts are specified, assign them
         if verts is not None:
-            # self.verts = np.array([verts[0], verts[1], verts[2]], dtype='f4')
             self.set_verts(*verts)
         else:
             self.shuffle()

@@ -6,7 +6,7 @@ import numpy as np
 
 num_frames = np.inf
 
-obj8 = hc.stim.Spherical_Segment(
+horizon = hc.stim.Spherical_Segment(
     hc.window, polang_top=90,
     polang_bot=180, radius=5.5, color=0.2)
 
@@ -15,32 +15,38 @@ pts = hc.stim.Dot_Cohere_Sph(
 )
 pts.add_region((0, 90), 18, (-90, 0), active=True)
 
-obj1 = hc.stim.Regular_Polygon(
+
+hex = hc.stim.Regular_Polygon(
     hc.window, 6, rad=2,
     init_rot=0, init_pos=[-3, 0, 0], init_ori=[1, 0, 0], colors='ring0')
 
-obj2 = hc.stim.Regular_Star_Polygon(
+
+star = hc.stim.Regular_Star_Polygon(
     hc.window, 5, rad1=2, turning_num=2, init_pos=[3, 0, 0], init_ori=[-1, 0, 0], colors='ring0')
 
-obj3 = hc.stim.Regular_Polygon(
+
+square = hc.stim.Regular_Polygon(
     hc.window, 4, rad=1.5,
     init_rot=0, init_pos=[0, -2, 0], init_ori=[0, 1, 0], colors='ring1')
 
 mot = np.sin(np.linspace(0, 2 * np.pi, 120, endpoint=False)) / 2
 mot2 = np.sin(np.linspace(0, 6 * np.pi, 120, endpoint=False)) / 2
 
-obj4 = hc.stim.Sphere_Lines(hc.window, colors='ring')
 
-obj5 = hc.stim.Grating(
-    hc.window, sf=5 * 2 / np.pi, tf=1.0, sd=0.25, c=1, o=1 * np.pi / 4, xres=64, yres=64,
+lines = hc.stim.Sphere_Lines(hc.window, colors='ring')
+
+
+grating = hc.stim.Grating(
+    hc.window, sf=5 * 2 / np.pi, tf=1.0, sd=0.25, c=1, o=45, xres=64, yres=64,
     edge_size=2, init_pos=[0, 0, -1], init_ori=[0, 0, 1])
 
-obj6 = hc.stim.Bar(hc.window,
-                   stripes=3,
-                   color=[0.8, 0.0, 0.8])
+bar = hc.stim.Bar(hc.window,
+                  stripes=3,
+                  color=[0.8, 0.0, 0.8])
 
-obj7 = hc.stim.STL(hc.window, 'Flower.stl', scale=0.02, color=0.6)
-obj7.set_pz(2)
+
+flower_stl = hc.stim.STL(hc.window, 'flowerx.stl', scale=0.03, color=0.9)
+flower_stl.set_pz(2)
 
 front_image = hc.stim.Image_File(hc.window, 1, 'front.png', init_pos=[0, 0, -0.65], init_ori=[0, 0, 1])
 left_image = hc.stim.Image_File(hc.window, 1, 'left.png', init_pos=[-0.65, 0, 0], init_ori=[1, 0, 0])
@@ -76,15 +82,15 @@ starts = [[hc.window.set_far, 10],
 
           [hc.arduino.set_lmr_scale, -0.1],
 
-          [obj8.switch, True],
+          [horizon.switch, True],
           [pts.switch, True],
-          [obj1.switch, True],
-          [obj2.switch, True],
-          [obj3.switch, True],
-          [obj4.switch, True],
-          [obj5.switch, True],
-          [obj6.switch, True],
-          [obj7.switch, True],
+          [hex.switch, True],
+          [star.switch, True],
+          [square.switch, True],
+          [lines.switch, True],
+          [grating.switch, True],
+          [bar.switch, True],
+          [flower_stl.switch, True],
           [front_image.switch, True],
           [right_image.switch, True],
           [left_image.switch, True],
@@ -94,24 +100,24 @@ starts = [[hc.window.set_far, 10],
           ]
 
 middles = [
-    [obj1.inc_rx, .01],
-    [obj2.set_rx, 1.5 * (mot + .33 * mot2)],
-    [obj3.set_py, mot],
-    [obj6.inc_ry, .01],
+    [hex.inc_rx, .01],
+    [star.set_rx, 1.5 * (mot + .33 * mot2)],
+    [square.set_py, mot],
+    [bar.inc_ry, .01],
     # [obj1.inc_rx, 0.01],
     [pts.move]
 ]
 
 ends = [
     [pts.switch, False],
-    [obj1.switch, False],
-    [obj2.switch, False],
-    [obj3.switch, False],
-    [obj4.switch, False],
-    [obj5.switch, False],
-    [obj6.switch, False],
-    [obj7.switch, False],
-    [obj8.switch, False],
+    [hex.switch, False],
+    [star.switch, False],
+    [square.switch, False],
+    [lines.switch, False],
+    [grating.switch, False],
+    [bar.switch, False],
+    [flower_stl.switch, False],
+    [horizon.switch, False],
     [front_image.switch, False],
     [right_image.switch, False],
     [left_image.switch, False],
