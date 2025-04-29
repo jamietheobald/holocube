@@ -235,10 +235,6 @@ class Movable(pyglet.graphics.Group):
     observer motion. 
 
     """
-
-    # vl: Optional[pyglet.graphics.vertexdomain.VertexList] = None
-    # def __init__(self, window, gl_type, verts, vert_inds=None, colors=None, tex_coords=None, add=False):
-
     def __init__(self, window, gl_type, verts, vert_inds=None, order=0):
         """
         Set the basic parameters for any movable object for the 3d enironment.
@@ -482,7 +478,7 @@ class Movable_Color(Movable):
 
         # if we don't have a proper color array yet, set one
         if not (isinstance(self.colors, np.ndarray) and self.colors.shape == (4, self.num)):
-            self.set_colors()
+            self.update_colors()
 
         self.vl = self.shader_program.vertex_list_indexed(
             count=self.num,
@@ -496,11 +492,15 @@ class Movable_Color(Movable):
 
         self.visible = True
 
-    def set_colors(self):
+
+    def update_colors(self, color=None):
         """Take the self.colors attribute and reassign it to an array
         of the length 4 * self.num
 
         """
+        if color is not None:
+            self.colors = color
+
         # do we have a single number? if so, set to gray
         if isinstance(self.colors, str) and self.colors == 'ring':
             angs = np.linspace(0, 2 * np.pi, self.num, endpoint=False)
@@ -1981,48 +1981,33 @@ class Deadleaf():
     """Randomly distributed disks, overlapping.
 
     """
-    def __init__(self, window, num=500, color=[.7,.8,.9], add=False):
+    def __init__(self, window, num=500, color=[.7,.8], add=False):
         self.leaves = []
         self.mots = []
         for i in range(num):
             col = np.random.uniform(color[0],color[1])
-            size = np.random.uniform(5,20)
-            s = Spherical_Segment(window, color=col, polang_bot=size,
-                                  radius=1+i/(10*num))
+            size = np.random.uniform(7,20)
+            s = Spherical_Segment(window, color=col,
+                                  polang_bot=size,
+                                  radius=1+i/(3*num))
             s.set_rx(np.random.uniform(0,360))
             s.set_rz(np.random.uniform(0,360))
 
             self.leaves.append(s)
             self.mots.append(np.random.randn(3))
-            self.flower = Spherical_segment(window, color=color[2], polang_bot=20,
-                                           radius=.95)
-            self.flower.set_rx(-90)
 
 
     def add(self, arg):
         for leaf in self.leaves:
             leaf.add(arg)
-        self.flower.add(arg)
 
     def on(self, arg):
         for leaf in self.leaves:
             leaf.on(arg)
-        self.flower.on(arg)
 
-    def set_flower_color(self, color):
-        self.flower.set_colorf(color)
-
-    def move_back(self):
+    def move(self):
         for mot,leaf in zip(self.mots, self.leaves):
             leaf.inc_rx(mot[0])
             leaf.inc_ry(mot[1])
             leaf.inc_rz(mot[2])
-
-    def move_flower(self, rx=0, ry=0, rz=0):
-        self.flower.inc_rz(rx)
-        self.flower.inc_rx(ry)
-        self.flower.inc_ry(rz)
-
-
-
 

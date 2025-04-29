@@ -3,7 +3,9 @@
 import holocube.hc as hc
 import numpy as np
 
+# frames in a test
 num_frames = 360
+# motion cycles in a test
 num_cycles = 6
 
 # magnitude of translational and rotational motions

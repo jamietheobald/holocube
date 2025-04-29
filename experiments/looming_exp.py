@@ -7,7 +7,7 @@ import numpy as np
 # how many frames for each test
 num_frames = 300
 # where does the disk begin
-init_dist = -5
+init_dist = -10
 
 # a random cloud of points in a sphere
 pts = hc.stim.Points(hc.window, num=1000, extent=np.abs(init_dist))
