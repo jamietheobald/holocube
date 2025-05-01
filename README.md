@@ -24,7 +24,7 @@ hypothetical camera in the virtual world, such as the projection onto the
 left facing side of the holocube arena (Fig. 2). So **screen**, **window**, 
 and **viewport** are standard terms in opengl, and all of them are set up in 
 the configuration file.
-![projection arena](images/viewports.png)
+![viewports](images/viewports.png)
 Figure 2. In opengl, screens, windows and viewports are different things.
 
 For the holocube software, I settled on some terms that are somewhat 
@@ -70,7 +70,7 @@ extension `.pyc`. So after you successfully run holocube, there will be more
 files with similar names in your directories, such as `windows.py` and `windows.pyc`. These are all taken care of automatically, so you never need to worry 
 about them. If they are accidentally deleted, they will simply be remade on 
 the next run.
-![projection arena](images/hc_files.png)
+![files](images/hc_files.png)
 
 ## the run script is short
 ```
