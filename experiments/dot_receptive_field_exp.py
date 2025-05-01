@@ -1,6 +1,6 @@
 # rest with a rotating bar
 
-import holocube.hc as hc
+import holocore.hc as hc
 import numpy as np
 
 

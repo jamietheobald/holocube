@@ -1,6 +1,6 @@
 # try a few runs of the deadleaf stimulus
 
-import holocube.hc as hc
+import holocore.hc as hc
 import numpy as np
 
 num_frames = 200
