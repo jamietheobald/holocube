@@ -4,7 +4,7 @@
 import pyglet
 from pyglet.window import key
 from numpy import *
-import holocube.hc as hc
+import holocore.hc as hc
 import os
 
 num_frames = inf

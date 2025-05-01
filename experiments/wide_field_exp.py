@@ -1,6 +1,6 @@
 # an example experiment that moves wide field dot arrays
 
-import holocube.hc as hc
+import holocore.hc as hc
 import numpy as np
 
 # frames in a test

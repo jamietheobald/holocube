@@ -1,7 +1,7 @@
 # A looming disk coming from different directions
 
 # always need hc, and np is usually useful
-import holocube.hc as hc
+import holocore.hc as hc
 import numpy as np
 
 # how many frames for each test
