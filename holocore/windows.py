@@ -1,6 +1,6 @@
 """Viewport and window classes
 
-Classes for holocube. Window is a subclass of a pyglet window, and
+Classes for holocore. Window is a subclass of a pyglet window, and
 starting it requires a viewport config file, which specifies the
 dimensions of the main window, and the locations and projection
 details of each viewport.
@@ -896,7 +896,7 @@ if __name__ == '__main__':
     bg = [1., 1., 1., 1.]
     near, far = .01, 1.
 
-    import holocube.hc as hc
+    import holocore.hc as hc
 
     hc.window.start(project=project, bg_color=bg, near=near, far=far)
 

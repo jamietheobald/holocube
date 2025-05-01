@@ -1,6 +1,6 @@
 # load a starmap and display
 
-import holocube.hc as hc
+import holocore.hc as hc
 import numpy as np
 
 

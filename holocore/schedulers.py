@@ -366,7 +366,7 @@ class Scheduler:
 
 
 if __name__ == '__main__':
-    import holocube.hc as hc
+    import holocore.hc as hc
 
     s = Scheduler()
     s.start(hc.window, hc.control, freq=2)

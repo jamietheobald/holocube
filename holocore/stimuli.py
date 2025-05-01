@@ -1976,6 +1976,14 @@ class Dot_Cohere_Sph(Movable_Color):
 
 
 
+class Timing_Dots(Movable):
+    """A stimulus to display dots that change brightness with a given frame,
+    usually for timing other events in the scene."""
+
+    def __init__(self):
+        pass
+
+
 
 class Deadleaf():
     """Randomly distributed disks, overlapping.
