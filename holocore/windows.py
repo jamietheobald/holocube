@@ -172,14 +172,32 @@ class Viewport:
 
         # set the projection matrix
         [left, right, bottom, top, near, far] = self.frustum
-        self.aspect = (right - left) / (top - bottom)
-        self.fov = np.degrees(2 * np.arctan((top - bottom) / (2 * near)))
-        self.projection_mat = Mat4.perspective_projection(
-            fov=self.fov,
-            aspect=self.aspect,
-            z_near=near,
-            z_far=far)
+        # # make a matrix from as a symmetrical projection
+        # self.aspect = (right - left) / (top - bottom)
+        # self.fov = np.degrees(2 * np.arctan((top - bottom) / (2 * near)))
+        # self.projection_mat = Mat4.perspective_projection(
+        #     fov=self.fov,
+        #     aspect=self.aspect,
+        #     z_near=near,
+        #     z_far=far)
 
+        # make a matrix from the frustum, potentially asymmetrical
+        a = (2 * near) / (right - left)
+        b = (2 * near) / (top - bottom)
+        c = (right + left) / (right - left)
+        d = (top + bottom) / (top - bottom)
+        e = -(far + near) / (far - near)
+        f = -(2 * far * near) / (far - near)
+        print(f'{a=}, {b=}, {c=}, {d=}, {e=}, {f=}, ')
+        # Row-major order
+        self.projection_mat =Mat4(
+            a, 0, 0, 0,
+            0, b, 0, 0,
+            c, d, e, -1,
+            0, 0, f, 0
+        )
+        print(f'{self.projection_mat=}')
+        # print(f'{self.projection_mat2=}')
 
 def str_to_key(s):
     """Change a string to an appropriate key tuple, one key, zero
