@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 import pyglet
-import holocube.hc as hc
+import holocore.hc as hc
 
 
 # start the components
@@ -11,7 +11,7 @@ hc.window.start(config_file='test_viewport.config')
 hc.arduino.start('dummy')
 hc.scheduler.start(hc.window, hc.control,
                    randomize=False, default_rest_time=.1)
-hc.scheduler.load_dir('calibrate', suffix='calibrate.py')
+hc.scheduler.load_dir('calibrate', suffix='cal.py')
 print('ready')
 
 # for debugging
