@@ -235,7 +235,7 @@ class Control_Window(pyglet.window.Window):
         :param
 
         """
-        print(f'mouse_press, ({x=}, {y=}, {button_code=}, {modifiers=})')
+        # print(f'mouse_press, ({x=}, {y=}, {button_code=}, {modifiers=})')
         for button in self.button_list:
             if button.is_in(x, y):
                 print(button.name)
@@ -291,7 +291,7 @@ class Control_Window(pyglet.window.Window):
             keysymbol = key.symbol_string(keypress[0]).lstrip(' _')
             modifiers = key.modifiers_string(keypress[1]).replace('MOD_', '').replace('|', ' ').lstrip(' ')
             func, args, kwargs = action[0].__name__, action[1], action[2]
-            print('{:<10} {:<6} --- {:<30}({}, {})'.format(modifiers, keysymbol, func, args, kwargs))
+            print(f'{modifiers:<10} {keysymbol:<6} --- {func:<30}({args}, {kwargs})')
 
     ##############
     ### ON KEY ###
@@ -312,8 +312,8 @@ class Control_Window(pyglet.window.Window):
         else:
             if symbol not in [65507, 65508, 65513, 65514, 65505,
                               65506]:  # if it's not a common modifier pressed on its own
-                print('No action for {} {} ({} {})'.format(key.modifiers_string(modifiers), key.symbol_string(symbol),
-                                                           modifiers, symbol))  # print whatever it was
+                print(f'No action for {key.modifiers_string(modifiers)} {key.symbol_string(symbol)} ({modifiers} {symbol})')
+
 
     def on_key_release(self, symbol, modifiers):
         '''When a key is released, remove its action from the frame_actions list, if it is there'''
