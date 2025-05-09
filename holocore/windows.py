@@ -65,17 +65,9 @@ class Viewport:
         if projection.startswith('persp'):
             self.project = 'persp'
             self.view = self.view_perspective
-        [left, right, bottom, top, frust_near, frust_far] = frustum
-        self.frustum = np.array([left, right, bottom, top, frust_near, frust_far])  # left right bottom top near far
 
-        # set the projection matrix
-        self.aspect = (right - left) / (top - bottom)
-        self.fov = np.degrees(2 * np.arctan((top - bottom) / (2 * frust_near)))
-        self.projection_mat = Mat4.perspective_projection(
-            fov=self.fov,
-            aspect=self.aspect,
-            z_near=frust_near,
-            z_far=frust_far)
+        self.frustum = np.array(frustum)
+        self.set_projection_mat()
 
         self.sprite_pos = 0
         self.clear_color = [0., 0., 0., 1.]
@@ -135,7 +127,6 @@ class Viewport:
         # projection params
             case 'fleft':
                 self.frustum[0] = self.frustum[0] * increment + val
-                print(f'{self.frustum[0]}')
             case 'fright':
                 self.frustum[1] = self.frustum[1] * increment + val
             case 'fbottom':
@@ -170,25 +161,24 @@ class Viewport:
                 self.clear_color[2] = self.clear_color[2] * increment + val[2]
                 self.clear_color[3] = self.clear_color[3] * increment + val[3]
 
-        # set the projection matrix
-        [left, right, bottom, top, near, far] = self.frustum
-        # # make a matrix from as a symmetrical projection
-        # self.aspect = (right - left) / (top - bottom)
-        # self.fov = np.degrees(2 * np.arctan((top - bottom) / (2 * near)))
-        # self.projection_mat = Mat4.perspective_projection(
-        #     fov=self.fov,
-        #     aspect=self.aspect,
-        #     z_near=near,
-        #     z_far=far)
+        # set the projection new matrix
+        self.set_projection_mat()
 
-        # make a matrix from the frustum, potentially asymmetrical
+
+    def set_projection_mat(self):
+        """Make a matrix from self.frustum, potentially asymmetrical,
+        and puts it in to self.projection_mat
+
+        """
+        [left, right, bottom, top, near, far] = self.frustum
+
         a = (2 * near) / (right - left)
         b = (2 * near) / (top - bottom)
         c = (right + left) / (right - left)
         d = (top + bottom) / (top - bottom)
         e = -(far + near) / (far - near)
         f = -(2 * far * near) / (far - near)
-        print(f'{a=}, {b=}, {c=}, {d=}, {e=}, {f=}, ')
+
         # Row-major order
         self.projection_mat =Mat4(
             a, 0, 0, 0,
@@ -196,8 +186,7 @@ class Viewport:
             c, d, e, -1,
             0, 0, f, 0
         )
-        print(f'{self.projection_mat=}')
-        # print(f'{self.projection_mat2=}')
+
 
 def str_to_key(s):
     """Change a string to an appropriate key tuple, one key, zero
@@ -407,7 +396,7 @@ class Holocube_Window(pyglet.window.Window):
         # save the file
         with open(filename, 'w') as config_file:
             config.write(config_file)
-        print('wrote {}'.format(config_file))
+        print(f'wrote {config_file}')
 
     # def add_vertex_list(self, )
 
@@ -441,7 +430,7 @@ class Holocube_Window(pyglet.window.Window):
             else:
                 bname = name
                 num = 0
-            name = '{}{}'.format(bname, num)
+            name = f'{bname}{num}'
         # add the new viewport to the list
         self.viewports.append(Viewport(batch, name, coords,
                                        scale_factors,
@@ -756,18 +745,18 @@ class Holocube_Window(pyglet.window.Window):
 
     def save_record(self, fn=None):
         if fn is None:
-            fn = 'data/hc-{}-{:02d}.npy'.format(time.strftime('%Y-%m-%d'), self.record_fn_ind)
+            fn = f'data/hc-{time.strftime('%Y-%m-%d')}-{self.record_fn_ind:02d}.npy'
         np.save(fn, self.record_data)
         self.record_fn_ind += 1
-        print('saved {} - {}'.format(fn, self.record_data.shape))
+        print(f'saved {fn} - {self.record_data.shape}')
 
     def save_png(self, prefix='frame'):
         # set the viewport to grab the whole window
         # (trying to grab only one viewport leads to strange behavior---
         #  only the first one is ever imaged, regardless of how which coords are specified)
         glViewport(0, 0, self.w, self.h)
-        self.bufm.get_color_buffer().save('{}_{:06d}.png'.format(prefix, self.frame))
-        print('{}_{:06d}.png'.format(prefix, self.frame))
+        self.bufm.get_color_buffer().save(f'{prefix}_{self.frame:06d}.png')
+        print(f'{prefix}_{self.frame:06d}.png')
         # self.bufm.get_color_buffer().save(f'{prefix}_{self.frame:06d}.png')
 
     def add_keypress_action(self, key, action, *args, **kwargs):
@@ -813,7 +802,7 @@ class Holocube_Window(pyglet.window.Window):
             keysymbol = key.symbol_string(keypress[0]).lstrip(' _')
             modifiers = key.modifiers_string(keypress[1]).replace('MOD_', '').replace('|', ' ').lstrip(' ')
             func, args, kwargs = action[0].__name__, action[1], action[2]
-            print('{:<10} {:<6} --- {:<30}({}, {})'.format(modifiers, keysymbol, func, args, kwargs))
+            print(f'{modifiers:<10} {keysymbol:<6} --- {func:<30}({args}, {kwargs})')
 
     def print_info(self):
         """print information about everything
@@ -824,17 +813,6 @@ class Holocube_Window(pyglet.window.Window):
         fps_value = self.fps_display.label.text
         print(f'fps: {fps_value}')
         print(f'bg: {self.bg_color}')
-        # print(f'fps = {}\n'.format(pyglet.clock.get_fps()))
-        # for vp in self.viewports:
-        #     print('viewport - {vp.name}')
-
-    # def print_info(self):
-    #     """print information about everything"""
-    #     print( 'pos:\n{}'.format(self.pos))
-    #     print('rot\n{}'.format(self.rot))
-    #     print('fps = {}\n'.format(pyglet.clock.get_fps()))
-    #     for vp in self.viewports:
-    #         print('viewport - {}'.format(vp.name))
 
     ##############
     ### ON KEY ###
@@ -855,8 +833,9 @@ class Holocube_Window(pyglet.window.Window):
         else:
             if symbol not in [65507, 65508, 65513, 65514, 65505,
                               65506]:  # if it's not a common modifier pressed on its own
-                print('No action for {} {} ({} {})'.format(key.modifiers_string(modifiers), key.symbol_string(symbol),
-                                                           modifiers, symbol))  # print whatever it was
+
+                print(f'No action for {key.modifiers_string(modifiers)} {key.symbol_string(symbol)} ({modifiers} {symbol})')
+
 
     def on_key_release(self, symbol, modifiers):
         """When a key is released, remove its action from the frame_actions list, if it is there"""
