@@ -21,7 +21,8 @@ w = hc.window
 v = w.viewports[0]
 c = hc.control
 b = c.button_list
-t = e[0].tests[0].starts[0]
+t = e[0].tests[0].starts
+td = t[19][0].__self__
 # d = e[0].tests[0].mids[-1][0].__self__
 
 # run pyglet
