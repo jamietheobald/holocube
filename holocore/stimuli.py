@@ -1516,14 +1516,6 @@ class Dot_Cohere_Sph(Movable_Color):
         if self.new_az: flow_azimuth*=-1
         flow_vec = azel_to_cart(flow_azimuth, flow_elevation)
 
-        # theta = (flow_elevation + 90) * np.pi / 180
-        # if self.new_az:
-        #     phi = (-flow_azimuth - 90) * np.pi / 180
-        # else:
-        #     phi = (flow_azimuth - 90) * np.pi / 180
-        # flow_vec = self.sph_to_cart(theta, phi)
-        # print(f'{self.gc_distances(vec)}')
-
         region = {'azimuth': azimuth, 'elevation': elevation,
                   'center': cent, 'radius': radius,
                   'flow_azimuth': flow_azimuth,
@@ -1533,7 +1525,6 @@ class Dot_Cohere_Sph(Movable_Color):
                   'old_inds': np.array([], dtype=np.int64),
                   'curr_inds': np.where(self.gc_distances(cent) < np.radians(radius))[0],
                   'active': active}
-        # print(f'add_region  {cent=}, {radius=} {region["curr_inds"]=}')
 
         self.regions.append(region)
 
@@ -1557,8 +1548,6 @@ class Dot_Cohere_Sph(Movable_Color):
         region['active'] = True
         center, radius = region['center'], region['radius']
         region['curr_inds'] = np.where(self.gc_distances(center) < np.radians(radius))[0]
-
-        # print(f'activate {ind} {center=} {radius=} {region["curr_inds"]=}')
 
 
     def deactivate_region(self, ind=None):
@@ -1671,7 +1660,6 @@ class Dot_Cohere_Sph(Movable_Color):
                 reg_ind = pt_ind
             az, el = self.regions[reg_ind]['azimuth'], self.regions[reg_ind]['elevation']
             x,y,z = azel_to_cart(az, el)
-            # print(f'{x,y,z=}')
             self.verts[:,pt_ind] = x,y,z
 
 
@@ -1919,9 +1907,7 @@ class Dot_Cohere_Sph(Movable_Color):
             # have points entered or exited the region?
             entered = np.setdiff1d(region['curr_inds'], region['old_inds'])
             exited = np.setdiff1d(region['old_inds'], region['curr_inds'])
-            # if len(entered)>0:
-            #     print(f'{entered=}')
-            
+
             if regen:
                 # if points are recycled in the region,
                 # first, boot out the ones that entered
@@ -1936,8 +1922,6 @@ class Dot_Cohere_Sph(Movable_Color):
                     for ind in exited:
                         vec = self.verts[:,ind]
                         uvec = self.uvecs[:,ind]
-                        # p = self.reenter_small_circle(self.verts[:,ind], self.uvecs[:,ind], center, rad)
-                        # print (f'wrap {ind} {vec=}; {uvec=}; {center=}; {rad=}#pre')
                         p = self.wrap_in_circle(center, np.radians(rad), uvec)
                         # ap = np.array(p)
                         self.verts[:,ind] = p
@@ -1976,13 +1960,81 @@ class Dot_Cohere_Sph(Movable_Color):
 
 
 
-class Timing_Dots(Movable):
+class Timing_Dots(Movable_Color):
     """A stimulus to display dots that change brightness with a given frame,
     usually for timing other events in the scene."""
 
-    def __init__(self):
-        pass
+    def __init__(self, window, num_dots=4, pos=(0,0,0), ori=(0,0,1),
+            side_len=1, color=(0,0,0,1), dot_side=.1, rows_cols=None, add=False):
+        """Construct the shapes and colors for the dot pallette:"""
+        self.num_dots = num_dots
+        # define the empty lists
+        verts = [[], [], []]
+        vert_inds = []
+        colors = []
 
+        # set up rows and columns
+        if (rows_cols is None) or (np.product(rows_cols) < num_dots):
+            rows = cols = int(np.floor(np.sqrt(num_dots)))
+            if rows*cols < num_dots:
+                cols += 1
+            if rows*cols < num_dots:
+                rows += 1
+
+        # now make the outer background square
+        ls = bs = -side_len/2
+        rs = ts =  side_len/2
+        verts[0].extend([ls, rs, rs, ls])
+        verts[1].extend([bs, bs, ts, ts])
+        verts[2].extend([0] * 4)
+
+        vert_inds.extend(np.array([0, 1, 2, 2, 3, 0]))
+        colors.extend([color, color, color, 1.0] * 4)
+
+        # now add each dot
+        for dot_ind in range(num_dots):
+            row = dot_ind // cols
+            col = dot_ind % cols
+            dx = side_len / cols
+            dy = side_len / rows
+            x = ls + (col + 0.5) * dx
+            y = bs + (rows - row - 0.5) * dy
+            ld = x - dot_side/2
+            rd = x + dot_side/2
+            bd = y - dot_side/2
+            td = y + dot_side/2
+            verts[0].extend([ld, rd, rd, ld])
+            verts[1].extend([bd, bd, td, td])
+            verts[2].extend([0] * 4)
+
+            vert_inds.extend(np.array([0, 1, 2, 2, 3, 0]) + (4 * (dot_ind + 1)))
+            colors.extend([color, color, color, 1.0] * 4)
+
+        self._order = 0
+
+        verts = rotate_points_to_normal(verts, ori)
+        verts += np.array(pos)[:, None]
+
+        colors = np.array(colors).reshape(-1, 4).T
+
+        super().__init__(
+            window=window,
+            gl_type=GL_TRIANGLES,
+            verts=verts,
+            vert_inds=vert_inds,
+            colors=colors,
+            add=add)
+
+
+    def flash(self, dot_num=1, color=1.0):
+        """Change a given dot number to a specified color."""
+        if dot_num > self.num_dots:
+            print(f'dot {dot_num} out of bounds. Only {self.num_dots} available.')
+            return
+        start = dot_num*16 # 4 corners and 4 color values
+        end = start + 16
+        val = [color, color, color, 1.0]*4
+        self.vl.colors[start:end] = val
 
 
 class Deadleaf():

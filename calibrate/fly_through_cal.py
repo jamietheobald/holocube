@@ -16,9 +16,15 @@ pts = hc.stim.Dot_Cohere_Sph(
 pts.add_region((0, 90), 18, (-90, 0), active=True)
 
 
-hex = hc.stim.Regular_Polygon(
-    hc.window, 6, rad=2,
-    init_rot=0, init_pos=[-3, 0, 0], init_ori=[1, 0, 0], colors='ring0')
+td = hc.stim.Timing_Dots(hc.window, 4, pos=[-1, 0, 0], ori=[1, 0, 0], color=0)
+tdf1 = np.zeros(20)
+tdf1[10:] = 1.
+tdf2 = np.zeros(30)
+tdf2[-1] = 1.
+tdf3 = np.ones(30)
+tdf3[-1] = 0.
+tdf4 = np.array([.5])
+
 
 
 star = hc.stim.Regular_Star_Polygon(
@@ -55,9 +61,6 @@ back_image = hc.stim.Image_File(hc.window, 1, 'back.png', init_pos=[0, 0, 0.65],
 bottom_image = hc.stim.Image_File(hc.window, 1, 'bottom.png', init_pos=[0, -0.65, 0], init_ori=[0, 1, 0])
 top_image = hc.stim.Image_File(hc.window, 1, 'top.png', init_pos=[0, 0.65, 0], init_ori=[0, -1, 0])
 
-# im = pyglet.image.load('front.png')
-# ss = pyglet.sprite.Sprite(im, 0,0,-4, batch=hc.window.batch)
-
 # add the experiment
 hc.scheduler.add_exp()
 
@@ -84,7 +87,7 @@ starts = [[hc.window.set_far, 10],
 
           [horizon.switch, True],
           [pts.switch, True],
-          [hex.switch, True],
+          [td.switch, True],
           [star.switch, True],
           [square.switch, True],
           [lines.switch, True],
@@ -100,17 +103,19 @@ starts = [[hc.window.set_far, 10],
           ]
 
 middles = [
-    [hex.inc_rx, .01],
-    [star.set_rx, 1.5 * (mot + .33 * mot2)],
+    [td.flash, 1, tdf1],
+    [td.flash, 2, tdf2],
+    [td.flash, 3, tdf3],
+    [td.flash, 4, tdf4],
+    [star.set_rx, 60 * mot + 20 * mot2],
     [square.set_py, mot],
-    [bar.inc_ry, .01],
-    # [obj1.inc_rx, 0.01],
+    [bar.inc_ry, .5],
     [pts.move]
 ]
 
 ends = [
     [pts.switch, False],
-    [hex.switch, False],
+    [td.switch, False],
     [star.switch, False],
     [square.switch, False],
     [lines.switch, False],
