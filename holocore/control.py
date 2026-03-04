@@ -290,7 +290,7 @@ class Control_Window(pyglet.window.Window):
         for keypress, action in items:
             keysymbol = key.symbol_string(keypress[0]).lstrip(' _')
             modifiers = key.modifiers_string(keypress[1]).replace('MOD_', '').replace('|', ' ').lstrip(' ')
-            func, args, kwargs = action[0].__name__, action[1], action[2]
+            num_frames, func, args, kwargs = action
             print(f'{modifiers:<10} {keysymbol:<6} --- {func:<30}({args}, {kwargs})')
 
     ##############
@@ -319,6 +319,10 @@ class Control_Window(pyglet.window.Window):
         '''When a key is released, remove its action from the frame_actions list, if it is there'''
         if (symbol, modifiers) in self.key_actions and self.key_actions[symbol, modifiers][0] == np.inf:
             self.frame_actions.remove(self.key_actions[(symbol, modifiers)])
+
+    def attach_camera(self, cam):
+        self.camera = cam
+
 
 
     def on_draw(self):
