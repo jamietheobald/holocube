@@ -147,13 +147,13 @@ class Viewport:
             # cam angles to the viewport
             case 'pan':
                 self.pan = self.pan * increment + val
-                self.set_cam_rot_mat()
+                self.cam_rot_mat = self.set_cam_rot_mat()
             case 'tilt':
                 self.tilt = self.tilt * increment + val
-                self.set_cam_rot_mat()
+                self.cam_rot_mat = self.set_cam_rot_mat()
             case 'dutch':
                 self.dutch = self.dutch * increment + val
-                self.set_cam_rot_mat()
+                self.cam_rot_mat = self.set_cam_rot_mat()
             # background color
             case 'bg':
                 self.clear_color[0] = self.clear_color[0] * increment + val[0]
@@ -190,7 +190,7 @@ class Viewport:
 
 def str_to_key(s):
     """Change a string to an appropriate key tuple, one key, zero
-    or more modifiers seperated by spaces, any order, upper or
+    or more modifiers separated by spaces, any order, upper or
     lower case mods: shift ctrl alt capslock numlock windows
     command option scrolllock function accel keys: A-Z, 0-9,
     BACKSPACE, TAB, LINEFEED, CLEAR, RETURN, ENTER, PAUSE,
@@ -218,7 +218,6 @@ def str_to_key(s):
         if 'MOD_' + ssu in key.__dict__:  # turn ctrl indo MOD_CTRL
             mods += key.__dict__['MOD_' + ssu]  # add to mods
         elif len(ssu) == 1 and ssu.isdigit():  # turn 5 into _5
-            ssu = '_' + ssu
             k = key.__dict__['_' + ssu]
         elif ssu in key.__dict__:
             k = key.__dict__[ssu]
@@ -426,7 +425,7 @@ class Holocube_Window(pyglet.window.Window):
         while any([name == vp.name for vp in self.viewports]):
             if name[-1].isdecimal():
                 bname = name[:-1]
-                num = name[-1] + 1
+                num = int(name[-1]) + 1
             else:
                 bname = name
                 num = 0
@@ -444,7 +443,7 @@ class Holocube_Window(pyglet.window.Window):
         if viewport_ind is None or viewport_ind.startswith('curr'):  # set to the current vp
             viewports = [self.viewports[self.curr_viewport_ind]]
         elif isinstance(viewport_ind, int):  # single integer set to a vp
-            viewport = [self.viewports[viewport_ind]]
+            viewports = [self.viewports[viewport_ind]]
         elif viewport_ind == 'all':  # set the value for all of them
             viewports = self.viewports
         elif viewport_ind == 'all-ref':  # set the value for all of them but ref windows
@@ -745,7 +744,8 @@ class Holocube_Window(pyglet.window.Window):
 
     def save_record(self, fn=None):
         if fn is None:
-            fn = f'data/hc-{time.strftime('%Y-%m-%d')}-{self.record_fn_ind:02d}.npy'
+            fn = f"data/hc-{time.strftime('%Y-%m-%d')}-{self.record_fn_ind:02d}.npy"
+
         np.save(fn, self.record_data)
         self.record_fn_ind += 1
         print(f'saved {fn} - {self.record_data.shape}')
@@ -801,8 +801,11 @@ class Holocube_Window(pyglet.window.Window):
         for keypress, action in items:
             keysymbol = key.symbol_string(keypress[0]).lstrip(' _')
             modifiers = key.modifiers_string(keypress[1]).replace('MOD_', '').replace('|', ' ').lstrip(' ')
-            func, args, kwargs = action[0].__name__, action[1], action[2]
-            print(f'{modifiers:<10} {keysymbol:<6} --- {func:<30}({args}, {kwargs})')
+            num_frames, func, args, kwargs = action
+            func_name = getattr(func, "__name__", repr(func))
+            print(f"... {func_name}({args}, {kwargs})")
+            # func, args, kwargs = action[0].__name__, action[1], action[2]
+            # print(f'{modifiers:<10} {keysymbol:<6} --- {func:<30}({args}, {kwargs})')
 
     def print_info(self):
         """print information about everything
@@ -818,8 +821,8 @@ class Holocube_Window(pyglet.window.Window):
     ### ON KEY ###
     ##############
     def on_key_press(self, symbol, modifiers):
-        print(f'w {symbol=}, {modifiers=}')
         """Execute functions for a key press event"""
+        print(f'w {symbol=}, {modifiers=}')
         # close the window (for when it has no visible close box)
         if symbol == key.PAUSE or symbol == key.BREAK:
             print('quitting now...')
