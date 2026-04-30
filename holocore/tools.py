@@ -1,54 +1,95 @@
 # make some tools for experiments and analysis
 
 import numpy as np
+import numbers
 
 
-def test_num_flash(test_num, num_frames, dist=10, col_1=255, col_2=96):
-    '''take a test length and a number and produce a sequence to send
+def resolve_color(color):
+    """Take a color value and return a 4 valued sequence
+    
+    """
+    if isinstance(color, numbers.Real):
+        val = [color, color, color, 1.0]
+    elif hasattr(color, '__len__'):
+        if len(color)==3:
+            val = [color[0], color[1], color[2], 1.0]
+        elif len(color)==4:
+            val = [color[0], color[1], color[2], color[3]]
+    return val
+
+def test_ends_flash(num_frames, rest_color=0.0, flash_color=1.0):
+    """Take a test length and return a sequence that flashes for the first and
+    next to last frame. The last frame returns the flash to its default
+
+    """
+    flash_val = resolve_color(flash_color)
+    rest_val = resolve_color(rest_color)
+
+    flash_seq = np.zeros(num_frames, dtype='O')
+    for i in range(num_frames):
+        flash_seq[i] = rest_val
+
+    for i in range(num_frames):
+        flash_seq[i] = rest_val
+    flash_seq[1] = flash_val
+    flash_seq[-2] = flash_val
+    return flash_seq
+
+
+
+def test_num_flash(num_frames, num, rest_color=0.0, flash_color=1.0, dist=10):
+    """take a test length and a number and produce a sequence to send
     to ref.set_ref_color.
 
-    '''
-    sl = np.zeros((num_frames), dtype='O')
+    """
+    flash_val = resolve_color(flash_color)
+    rest_val = resolve_color(rest_color)
+
+    flash_seq = np.zeros(num_frames, dtype='O')
     for i in range(num_frames):
-        sl[i] = (0, 0, 0)
-    for i in range(test_num):
-        sl[(i + 2) * dist] = (0, col_2, 0)
-    sl[0] = (0, col_1, 0)
-    sl[-2] = (0, col_1, 0)
-    return sl
+        flash_seq[i] = rest_val
+
+    for i in range(num):
+        flash_seq[(i + 2) * dist] = flash_val
+    return flash_seq
 
 
-def test_bin_flash(num, num_frames, dist=10, col_1=255, col_2=96):
-    '''Return a pulsing synch pattern, to represent the start, end, and
+
+def test_bin_flash(num_frames, num, rest_color=0.0, flash_color=1.0, dist=10):
+    """Return a pulsing synch pattern, to represent the start, end, and
     slots for a flash sequence, along with a binary flashes sequence
     in reverse order (least significant first) to represent a number.
 
-    '''
-    s1 = np.zeros((num_frames), dtype='O')
-    s2 = np.zeros((num_frames), dtype='O')
+    """
+    flash_val = resolve_color(flash_color)
+    rest_val = resolve_color(rest_color)
+    
+    flash_seq = np.zeros(num_frames, dtype='O')
+    synch_seq = np.zeros(num_frames, dtype='O')
     for i in range(num_frames):
-        s1[i] = (0, 0, 0)
-        s2[i] = (0, 0, 0)
+        flash_seq[i] = rest_val
+        synch_seq[i] = rest_val
 
     # make the synch flashes, usually every 10 frames
-    s1[1::dist] = [(0, col_2, 0)]
-    s1[1] = (0, col_1, 0)
-    s1[-2] = (0, col_1, 0)
-    s1[-1] = (0, 0, 0)
+    synch_seq[1::dist] = flash_val
+    synch_seq[1] = flash_val
+    synch_seq[-2] = flash_val
+    synch_seq[-1] = flash_val
 
-    # now the binary flashes
-    bnum_rev = np.binary_repr(num)[::-1]
-    for i in range(len(bnum_rev)):
-        s2[i * 10 + 1] = (0, int(bnum_rev[i]) * col_1, 0)
+    # now the binary flashes, reversed
+    bnum_reverse = np.binary_repr(num)[::-1]
+    for i in range(len(bnum_reverse)):
+        if int(bnum_reverse) == 1:
+            flash_seq[i * dist + 1] = flash_val
 
     return s1, s2
 
 
 def test_flash(frame_list, num_frames, color=255):
-    '''Return a flash sequence with any frames highlighted
+    """Return a flash sequence with any frames highlighted
 
-    '''
-    s1 = np.zeros((num_frames), dtype='O')
+    """
+    s1 = np.zeros(num_frames, dtype='O')
     for i in range(num_frames):
         s1[i] = (0, 0, 0)
     for frame in frame_list:
@@ -450,7 +491,7 @@ def mseq(baseVal, powerVal, shift=1, whichSeq=1):
     ms = np.zeros([bitNum])
 
     if whichSeq == None:
-        whichSeq = np.ceil(rand(1) * len(tap))
+        whichSeq = np.ceil(np.rand(1) * len(tap))
     else:
         if (whichSeq > len(tap)) or (whichSeq < 1):
             print(' wrapping arround!')
