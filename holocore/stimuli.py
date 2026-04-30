@@ -12,6 +12,7 @@ from pyglet.gl import *
 from pyglet.graphics.shader import Shader, ShaderProgram
 from pyglet.math import Mat4, Vec3
 # from pyglet.graphics.vertexdomain import VertexList
+import holocore.tools
 
 import numpy as np
 import stl
@@ -22,19 +23,6 @@ import scipy.stats
 PYGLET_VERSION = pyglet.version
 PYGLET_MAJOR = int(PYGLET_VERSION.split('.')[0])
 
-#
-# vertex_source_i = """#version 330 core
-# layout (location = 0) in vec3 vertices;
-# void main() {
-#     gl_Position = vec4(vertices, 1.0);
-# }"""
-#
-# fragment_source_i = """#version 330 core
-# out vec4 FragColor;
-# void main() {
-#     FragColor = vec4(1.0);
-# }
-# """
 
 vertex_source_c = """#version 330 core
 
@@ -50,9 +38,11 @@ uniform vpBlock {
 
 uniform mat4 model;
 
+uniform float point_size;
+
 void main() {
     gl_Position = viewport.projection * viewport.view * model * vec4(vertices, 1.0);
-    gl_PointSize = 2.0;
+    gl_PointSize = point_size;
     frag_color = colors;
 }
 """
@@ -519,12 +509,12 @@ class Movable_Color(Movable):
         elif hasattr(self.colors, '__len__') and \
                 len(self.colors) == 3 and \
                 isinstance(self.colors[0], numbers.Real):
-            self.colors = np.array([[*self.colors, 1.0]] * self.num)
+            self.colors = np.array([[*self.colors, 1.0]] * self.num).T
         # if we have a 4 tuple of numbers, 1 color for all verts
         elif hasattr(self.colors, '__len__') and \
                 len(self.colors) == 4 and \
                 isinstance(self.colors[0], numbers.Real):
-            self.colors = np.array([[*self.colors]] * self.num)
+            self.colors = np.array([[*self.colors]] * self.num).T
         # if we have list of 3 tuples
         elif hasattr(self.colors, '__len__') and \
                 hasattr(self.colors[0], '__len__') and \
@@ -538,6 +528,9 @@ class Movable_Color(Movable):
         # if None or something else, use white
         else:
             self.colors = np.array([[1.0] * self.num] * 4)
+
+        if self.visible:
+            self.vl.colors[:] = self.colors.T.flatten()
 
     def __eq__(self, other):
         return id(self) == id(other)
@@ -845,12 +838,20 @@ class Points(Movable_Color):
 
     def __init__(self, window, num=1000, colors=None, pt_size=1,
                  verts=None, extent=None, add=False):
-        """This is here"""
-        # super(Points, self).__init__(window)
+        """
+        :param window: display window which the points live in
+        :param num: How many points
+        :param colors: This can take a number, a sequence, or a sequence of
+        sequences, to color each point
+        :param pt_size: Not working yet
+        :param verts: If we want to specify each separately
+        :param extent:
+        :param add: add right away, or turn on later.
+        """
+
         self.pt_size = pt_size
         self.num = num
-        # self.color = color
-        # self.colors = np.array(np.repeat(color, self.num * 4), dtype=np.uint8)
+
         self.tex_coords = None
         self.extent = extent
 
@@ -916,6 +917,7 @@ class Points(Movable_Color):
 
     def set_state(self):
         super().set_state()
+        self.shader_program["point_size"] = float(self.pt_size)
         ### I need to rewrite the shader to get point size working
         # glPointSize(self.pt_size)
 
@@ -1569,7 +1571,7 @@ class Dot_Cohere_Sph(Movable_Color):
 
     def print_active_region_azel(self):
         active_region = [region for region in self.regions if region['active']][0]
-        print(f'azimuth = {active_region['azimuth']}, elevation = {active_region['elevation']}')
+        print(f"azimuth = {active_region['azimuth']}, elevation = {active_region['elevation']}")
 
     def increment_region(self):
         """Add one to the region index"""
@@ -1965,7 +1967,7 @@ class Timing_Dots(Movable_Color):
     usually for timing other events in the scene."""
 
     def __init__(self, window, num_dots=4, pos=(0,0,0), ori=(0,0,1),
-            side_len=1, color=(0,0,0,1), dot_side=.1, rows_cols=None, add=False):
+            side_len=1, color=0.0, dot_side=.1, rows_cols=None, add=False):
         """Construct the shapes and colors for the dot pallette:"""
         self.num_dots = num_dots
         # define the empty lists
@@ -2033,8 +2035,9 @@ class Timing_Dots(Movable_Color):
             return
         start = dot_num*16 # 4 corners and 4 color values
         end = start + 16
-        val = [color, color, color, 1.0]*4
-        self.vl.colors[start:end] = val
+
+        val = holocore.tools.resolve_color(color)
+        self.vl.colors[start:end] = val*4
 
 
 class Deadleaf():
