@@ -22,7 +22,7 @@ def main():
     )
     print("ready")
 
-    pyglet.app.run(1 / frame_rate)
+    pyglet.app.run(interval=None)
 
 
 if __name__ == "__main__":

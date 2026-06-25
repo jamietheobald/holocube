@@ -149,9 +149,11 @@ class Scheduler:
         self.frame = 0  # the frame number in a rest or test
         self.test_list = []  # tests, rests, or idles to do
 
-    def start(self, window, control, randomize=True, freq=120, default_rest_time=3, beep_ind=-1, beep_file=None):
+    def start(self, window, control, randomize=True, freq=120, default_rest_time=3,
+              beep_ind=-1, beep_file=None, draw_driven=False):
         """Start the scheduler (not an experiment)"""
         self.freq = freq
+        self.draw_driven = draw_driven
 
         self.window = window
         self.control = control
@@ -183,7 +185,10 @@ class Scheduler:
 
         # now start the frames
         self.test_list = [self.idles[0].rest[0]]
-        pyglet.clock.schedule_interval(self.show_frame, 1. / self.freq)
+        if self.draw_driven:
+            self.window.set_scheduler(self)
+        else:
+            pyglet.clock.schedule_interval(self.show_frame, 1. / self.freq)
 
     def load_dir(self, dir_name='experiments', suffix=('exp.py', 'rest.py')):
         """load a file with experiments and rests"""

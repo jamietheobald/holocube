@@ -178,11 +178,11 @@ class Control_Window(pyglet.window.Window):
     controls
 
     """
-    def __init__(self):
+    def __init__(self, vsync=False):
         self.frame = 0
         config = pyglet.gl.Config(sample_buffers=1, samples=4, double_buffer=True, depth_size=24)
         style = pyglet.window.Window.WINDOW_STYLE_DEFAULT
-        super().__init__(style=style, config=config)
+        super().__init__(style=style, config=config, vsync=vsync)
 
         self.disp = pyglet.display.get_display()
         self.screens = self.display.get_screens()  # lists all available monitors explicitly
@@ -338,6 +338,5 @@ class Control_Window(pyglet.window.Window):
         self.frame_actions = [[num_frames - 1, action, args, kwargs]
                               for num_frames, action, args, kwargs
                               in self.frame_actions if num_frames > 1]
-
 
 

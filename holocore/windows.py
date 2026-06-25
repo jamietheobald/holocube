@@ -15,10 +15,14 @@ from pyglet.math import Mat4, Vec3
 
 import numpy as np
 # from os.path import expanduser
+import logging
 import time
 import configparser
 import ast
 import numbers
+
+
+logger = logging.getLogger(__name__)
 
 
 class Viewport:
@@ -241,12 +245,12 @@ class Holocube_Window(pyglet.window.Window):
 
     """
 
-    def __init__(self, ):
+    def __init__(self, vsync=True):
         # init the window class
         # config buffers double buffering and for antialiasing
         config = pyglet.gl.Config(sample_buffers=1, samples=4, double_buffer=True, depth_size=24)
         style = pyglet.window.Window.WINDOW_STYLE_BORDERLESS
-        super().__init__(style=style, config=config)
+        super().__init__(style=style, config=config, vsync=vsync)
 
         # self.disp = pyglet.canvas.Display()    #**** New ****
         # self.screens = self.disp.get_screens()
@@ -270,6 +274,15 @@ class Holocube_Window(pyglet.window.Window):
         self.pos = np.zeros(3)
         self.rot = np.identity(3)  # rotation matrix
         self.frame = 0
+        self.scheduler = None
+        self.target_frame_interval = None
+        self.frame_timing_warn_factor = 1.5
+        self._last_draw_time = None
+        self._frame_timing_warning_interval = 5.0
+        self._last_frame_timing_warning_time = 0.0
+        self._frame_timing_warning_count = 0
+        self._frame_timing_skipped_count = 0
+        self._frame_timing_worst_dt = 0.0
 
         self.add_keypress_action(key.I, self.print_info)
         self.bufm = pyglet.image.get_buffer_manager()
@@ -310,6 +323,52 @@ class Holocube_Window(pyglet.window.Window):
 
     def __hash__(self):
         return hash(id(self))
+
+    def set_scheduler(self, scheduler):
+        self.scheduler = scheduler
+
+    def configure_frame_timing(self, frame_rate, warn_factor=1.5):
+        self.target_frame_interval = 1.0 / frame_rate
+        self.frame_timing_warn_factor = warn_factor
+        self._last_draw_time = None
+        self._last_frame_timing_warning_time = 0.0
+        self._frame_timing_warning_count = 0
+        self._frame_timing_skipped_count = 0
+        self._frame_timing_worst_dt = 0.0
+
+    def log_frame_timing(self):
+        if self.target_frame_interval is None:
+            return
+
+        now = time.perf_counter()
+        if self._last_draw_time is None:
+            self._last_draw_time = now
+            return
+
+        dt = now - self._last_draw_time
+        self._last_draw_time = now
+        if dt <= self.target_frame_interval * self.frame_timing_warn_factor:
+            return
+
+        skipped = max(1, round(dt / self.target_frame_interval) - 1)
+        self._frame_timing_warning_count += 1
+        self._frame_timing_skipped_count += skipped
+        self._frame_timing_worst_dt = max(self._frame_timing_worst_dt, dt)
+        if now - self._last_frame_timing_warning_time < self._frame_timing_warning_interval:
+            return
+
+        logger.warning(
+            "holocube frame timing missed target: frame=%s events=%s approx_skipped=%s worst_dt=%.6fs target=%.6fs",
+            self.frame,
+            self._frame_timing_warning_count,
+            self._frame_timing_skipped_count,
+            self._frame_timing_worst_dt,
+            self.target_frame_interval,
+        )
+        self._last_frame_timing_warning_time = now
+        self._frame_timing_warning_count = 0
+        self._frame_timing_skipped_count = 0
+        self._frame_timing_worst_dt = 0.0
 
     def start(self, config_file='viewport.config'):
         """Instantiate the window by loading the config file"""
@@ -860,6 +919,18 @@ class Holocube_Window(pyglet.window.Window):
         execute any held key commands
 
         """
+        self.log_frame_timing()
+        if self.scheduler is not None:
+            try:
+                self.scheduler.show_frame()
+            except Exception:
+                logger.exception(
+                    "scheduler frame failed: window_frame=%s scheduler_frame=%s",
+                    self.frame,
+                    self.scheduler.frame,
+                )
+                raise
+
         self.clear()
 
         glClearColor(0.0, 0.0, 0.0, 1.0)

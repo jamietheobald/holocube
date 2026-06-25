@@ -24,72 +24,77 @@ PYGLET_VERSION = pyglet.version
 PYGLET_MAJOR = int(PYGLET_VERSION.split('.')[0])
 
 
-vertex_source_c = """#version 330 core
+GLSL_VERSION = "#version 330 core\n"
 
+GLSL_VIEWPORT_AND_MODEL_UNIFORMS = """
+uniform vpBlock {
+    uniform mat4 projection;
+    uniform mat4 view;
+} viewport;
+
+uniform mat4 model;
+"""
+
+GLSL_PROJECT_POSITION = (
+    "viewport.projection * viewport.view * model * vec4(vertices, 1.0)"
+)
+
+
+COLOR_VERTEX_SHADER = GLSL_VERSION + f"""
 layout (location = 0) in vec3 vertices;
 layout (location = 1) in vec4 colors;
 
 out vec4 frag_color;
 
-uniform vpBlock {
-    uniform mat4 projection;
-    uniform mat4 view;
-} viewport;
-
-uniform mat4 model;
-
+{GLSL_VIEWPORT_AND_MODEL_UNIFORMS}
 uniform float point_size;
 
-void main() {
-    gl_Position = viewport.projection * viewport.view * model * vec4(vertices, 1.0);
+void main() {{
+    gl_Position = {GLSL_PROJECT_POSITION};
     gl_PointSize = point_size;
     frag_color = colors;
-}
+}}
 """
 
-fragment_source_c = """#version 330 core
-
+COLOR_FRAGMENT_SHADER = GLSL_VERSION + """
 in vec4 frag_color;
 
 out vec4 FragColor;
 
 void main() {
-    FragColor = vec4(frag_color);  // Just use color
-}"""
+    FragColor = frag_color;
+}
+"""
 
-vertex_source_t = """#version 330 core
 
+TEXTURE_VERTEX_SHADER = GLSL_VERSION + f"""
 layout (location = 0) in vec3 vertices;
 layout (location = 1) in vec2 tex_coords;
 
-out vec2 TexCoords;
+out vec2 frag_tex_coords;
 
-uniform vpBlock {
-    uniform mat4 projection;
-    uniform mat4 view;
-} viewport;
+{GLSL_VIEWPORT_AND_MODEL_UNIFORMS}
 
-uniform mat4 model;
-
-void main() {
-    gl_Position = viewport.projection * viewport.view * model * vec4(vertices, 1.0);
-    TexCoords = tex_coords;
-}
+void main() {{
+    gl_Position = {GLSL_PROJECT_POSITION};
+    frag_tex_coords = tex_coords;
+}}
 """
 
-fragment_source_t = """#version 330 core
-in vec2 TexCoords;
+TEXTURE_FRAGMENT_SHADER = GLSL_VERSION + """
+in vec2 frag_tex_coords;
+
 out vec4 FragColor;
+
 uniform sampler2D texture1;
 
-void main()
-{
-    FragColor = texture(texture1, TexCoords);
+void main() {
+    FragColor = texture(texture1, frag_tex_coords);
 }
 """
 
-vertex_source_l = """#version 330 core
 
+LIGHTED_VERTEX_SHADER = GLSL_VERSION + f"""
 layout (location = 0) in vec3 vertices;
 layout (location = 1) in vec4 colors;
 layout (location = 2) in vec3 normals;
@@ -98,27 +103,19 @@ out vec4 frag_color;
 out vec3 frag_normal;
 out vec3 frag_pos;
 
-uniform vpBlock {
-    uniform mat4 projection;
-    uniform mat4 view;
-} viewport;
+{GLSL_VIEWPORT_AND_MODEL_UNIFORMS}
 
-uniform mat4 model;
-
-void main() {
+void main() {{
     vec4 world_pos = model * vec4(vertices, 1.0);
+
     gl_Position = viewport.projection * viewport.view * world_pos;
-
     frag_color = colors;
-
-    // Normal transformation (ignore scaling for now)
     frag_normal = mat3(transpose(inverse(model))) * normals;
     frag_pos = world_pos.xyz;
-    }
+}}
 """
 
-fragment_source_l = """#version 330 core
-
+LIGHTED_FRAGMENT_SHADER = GLSL_VERSION + """
 in vec4 frag_color;
 in vec3 frag_normal;
 in vec3 frag_pos;
@@ -126,25 +123,61 @@ in vec3 frag_pos;
 out vec4 FragColor;
 
 uniform vec3 light_pos;
-uniform float ambient_strength;  // e.g., 0.2
+uniform float ambient_strength;
 
 void main() {
-    // Normalize vectors
-    vec3 norm = normalize(frag_normal);
-    vec3 light_dir = normalize(light_pos - frag_pos);  // Direction to the light
+    vec3 normal = normalize(frag_normal);
+    vec3 light_dir = normalize(light_pos - frag_pos);
 
-    // Diffuse shading (Lambertian)
-    float diff = max(dot(norm, light_dir), 0.0);
+    float diffuse_strength = max(dot(normal, light_dir), 0.0);
 
-    // Ambient and diffuse contributions
     vec3 ambient = ambient_strength * frag_color.rgb;
-    vec3 diffuse = diff * frag_color.rgb;
+    vec3 diffuse = diffuse_strength * frag_color.rgb;
 
-    vec3 final_color = ambient + diffuse;
-
-    FragColor = vec4(final_color, frag_color.a);
+    FragColor = vec4(ambient + diffuse, frag_color.a);
 }
 """
+
+
+SHADER_SOURCES = {
+    "color": (COLOR_VERTEX_SHADER, COLOR_FRAGMENT_SHADER),
+    "texture": (TEXTURE_VERTEX_SHADER, TEXTURE_FRAGMENT_SHADER),
+    "lighted": (LIGHTED_VERTEX_SHADER, LIGHTED_FRAGMENT_SHADER),
+}
+
+_SHADER_PROGRAMS = {}
+
+
+def _context_shader_key(window, shader_name):
+    return id(window.context), shader_name
+
+
+def _bind_viewport_uniform_block(shader_program):
+    block_index = glGetUniformBlockIndex(shader_program.id, b"vpBlock")
+    glUniformBlockBinding(shader_program.id, block_index, 0)
+
+
+def get_shader_program(window, shader_name):
+    """Return a shared shader program for this GL context and shader type."""
+    key = _context_shader_key(window, shader_name)
+    if key in _SHADER_PROGRAMS:
+        return _SHADER_PROGRAMS[key]
+
+    window.switch_to()
+    vertex_source, fragment_source = SHADER_SOURCES[shader_name]
+    shader_program = ShaderProgram(
+        Shader(vertex_source, "vertex"),
+        Shader(fragment_source, "fragment"),
+    )
+    _bind_viewport_uniform_block(shader_program)
+
+    if shader_name == "texture":
+        shader_program.use()
+        shader_program["texture1"] = 0
+        shader_program.stop()
+
+    _SHADER_PROGRAMS[key] = shader_program
+    return shader_program
 
 
 
@@ -443,18 +476,7 @@ class Movable_Color(Movable):
 
         self.colors = colors
 
-        vs = vertex_source_c
-        fs = fragment_source_c
-
-        self.vert_shader = Shader(vs, 'vertex')
-        self.frag_shader = Shader(fs, 'fragment')
-        self.shader_program = ShaderProgram(self.vert_shader, self.frag_shader)
-
-        # this is to allow updating all vpblock (view and projection
-        # for each viewport) with just one call in windows.py
-        block_name = 'vpBlock'
-        block_index = glGetUniformBlockIndex(self.shader_program.id, block_name.encode('utf-8'))
-        glUniformBlockBinding(self.shader_program.id, block_index, 0)
+        self.shader_program = get_shader_program(window, "color")
 
         if add: self.add()
 
@@ -561,17 +583,7 @@ class Movable_Texture(Movable):
         if self.tex_coords is None:
             self.tex_coords = np.array([[0., 1., 1., 0.], [0., 0., 1., 1.]])
 
-        vs = vertex_source_t
-        fs = fragment_source_t
-        self.vert_shader = Shader(vs, 'vertex')
-        self.frag_shader = Shader(fs, 'fragment')
-        self.shader_program = ShaderProgram(self.vert_shader, self.frag_shader)
-
-        # this is to allow updating all vpblock (view and projection
-        # for each viewport) with just one call in windows.py
-        block_name = 'vpBlock'
-        block_index = glGetUniformBlockIndex(self.shader_program.id, block_name.encode('utf-8'))
-        glUniformBlockBinding(self.shader_program.id, block_index, 0)
+        self.shader_program = get_shader_program(window, "texture")
 
         if add: self.add()
 
@@ -630,23 +642,7 @@ class Movable_Animation(Movable):
         if self.tex_coords is None:
             self.tex_coords = np.array([[0., 1., 1., 0.], [0., 0., 1., 1.]], dtype='f4')
 
-        vs = vertex_source_t
-        fs = fragment_source_t
-        self.vert_shader = Shader(vs, 'vertex')
-        self.frag_shader = Shader(fs, 'fragment')
-        self.shader_program = ShaderProgram(self.vert_shader, self.frag_shader)
-
-        vs = vertex_source_c
-        fs = fragment_source_c
-        self.vert_shader_init = Shader(vs, 'vertex')
-        self.frag_shader_init = Shader(fs, 'fragment')
-        self.dummy_shader = ShaderProgram(self.vert_shader_init, self.frag_shader_init)
-
-        # this is to allow updating all vpblock (view and projection
-        # for each viewport) with just one call in windows.py
-        block_name = 'vpBlock'
-        block_index = glGetUniformBlockIndex(self.shader_program.id, block_name.encode('utf-8'))
-        glUniformBlockBinding(self.shader_program.id, block_index, 0)
+        self.shader_program = get_shader_program(window, "texture")
 
         if add: self.add()
 
@@ -695,7 +691,6 @@ class Movable_Animation(Movable):
         trans_mat = Mat4.from_translation(Vec3(*self.pos))
 
         self.shader_program.use()
-        self.shader_program['texture1'] = 0
         self.shader_program["model"] = trans_mat @ rot_mat_z @ rot_mat_y @ rot_mat_x
 
     def unset_state(self):
@@ -726,18 +721,7 @@ class Movable_Lighted(Movable):
         self.normals = normals
         self.colors = colors
 
-        vs = vertex_source_l
-        fs = fragment_source_l
-
-        self.vert_shader = Shader(vs, 'vertex')
-        self.frag_shader = Shader(fs, 'fragment')
-        self.shader_program = ShaderProgram(self.vert_shader, self.frag_shader)
-
-        # this is to allow updating all vpblock (view and projection
-        # for each viewport) with just one call in windows.py
-        block_name = 'vpBlock'
-        block_index = glGetUniformBlockIndex(self.shader_program.id, block_name.encode('utf-8'))
-        glUniformBlockBinding(self.shader_program.id, block_index, 0)
+        self.shader_program = get_shader_program(window, "lighted")
 
         if add: self.add()
 
@@ -1954,6 +1938,7 @@ class Dot_Cohere_Sph(Movable_Color):
         # self.move()
         # self.time = 0
         super().set_state()
+        self.shader_program["point_size"] = float(self.pt_size)
         glPointSize(self.pt_size)
 
     def unset_state(self):
@@ -2073,4 +2058,3 @@ class Deadleaf():
             leaf.inc_rx(mot[0])
             leaf.inc_ry(mot[1])
             leaf.inc_rz(mot[2])
-
