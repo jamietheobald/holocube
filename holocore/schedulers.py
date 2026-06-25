@@ -204,7 +204,6 @@ class Scheduler:
             os.chdir(curr_dir)
 
         for exp_ind, exp in enumerate(self.exps):
-            print(f'{exp_ind=} {exp.name=}')
             self.control.add_button(exp.name, [self.begin_exp, exp_ind],
                                     number=(10,3,exp_ind+1,1),
                                     color_num=(exp_ind, len(self.exps)),
